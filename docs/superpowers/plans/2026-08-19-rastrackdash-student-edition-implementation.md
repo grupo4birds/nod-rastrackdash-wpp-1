@@ -36,6 +36,57 @@
 | 4 | URLs afiliado VPS | Placeholders `[AFILIADO_HOSTGATOR|DIGITALOCEAN|CONTABO]` |
 | 5 | NOD API modelagem | Entitlement na mesma License: `nodApiEnabled` + `nodApiExpiresAt` (add-on), cobranca Asaas R$20 operada na PalmUP |
 | 6 | WhatsApp notificacao PalmUP | Instancia **Uazapi administrativa dedicada** da PalmUP (nao broker NOD no dia 1) |
+| 7 | Sizing VPS | Ver secao **VPS sizing (pesquisa)** abaixo + `docs/setup/vps.md` (nao usar numeros aleatorios) |
+| 8 | Aviso desconexao WhatsApp | **Implementar primeiro no WppTrack (`dash-com-ia`)** em producao; portar para o template na F5. Nao bloquear F1 |
+
+## VPS sizing (pesquisa) — substitui faixas aleatorias
+
+### Evidencia Dokploy (oficial)
+Fonte: [Dokploy Installation Requirements](https://github.com/Dokploy/website/blob/main/apps/docs/content/docs/core/installation.mdx)
+
+> server should have at least **2GB of RAM** and **30GB of disk space** … handle resources consumed by Docker during builds and prevents system freezes.
+
+Isso e o **piso do PaaS Dokploy sozinho** (painel + Docker/Traefik + builds), **nao** o piso confortavel do app completo.
+
+### Evidencia stack RastrackDash/WppTrack
+- API NestJS (Node 22) + Prisma
+- PostgreSQL 16 + Redis 7 + BullMQ (e-mail, meta sync, webhooks, CAPI…)
+- Build Docker/pnpm no host = pico de RAM/CPU no deploy
+- Web Next preferencialmente na **Vercel** (VPS fica API+DB+Redis+Dokploy)
+
+### Carga 500 leads/dia (ordem de grandeza)
+- 500/dia ≈ 0,35 lead/min media; o problema real sao **bursts de campanha** + **builds** + **sync Meta**
+- Cada lead: webhook → parse → Postgres → regras → possivel CAPI enqueue
+- Em regime baixo/medio, gargalo tipico e **RAM + I/O de build**, nao CPU media sustentada
+
+### Faixas oficiais deste plano
+
+| Perfil | Quando | Spec |
+|---|---|---|
+| Piso Dokploy (referencia) | so instalar Dokploy | 2 GB RAM / 30 GB disco |
+| **Minima do produto** | 1–5 workspaces, ate ~500 leads/dia, web na Vercel | **2 vCPU / 4 GB RAM / 60–80 GB SSD** |
+| **Recomendada** | 5–20 workspaces, ate ~5k leads/dia | **4 vCPU / 8 GB RAM / 120–160 GB SSD** |
+| **Alta** | 20+ workspaces ou picos sustentados | **4–8 vCPU / 16 GB RAM / 200 GB+** |
+| Evitar | qualquer perfil com app | 1 GB RAM / disco lento |
+
+Detalhamento e checklist: `docs/setup/vps.md` no repo publico.
+
+## Aviso de desconexao WhatsApp (produto WppTrack → depois template)
+
+**Pedido do Samuel (revisao do plano):** o usuario cadastra um telefone para ser avisado quando o WhatsApp (NOD API / Uazapi) desconectar, para reconectar.
+
+**Decisao de ordem (aprovada na revisao):**
+1. **Implementar primeiro no `dash-com-ia` (WppTrack em producao para cliente)** — branch propria de produto, fora do trilho F1 license se necessario.
+2. **Depois portar** para o RastrackDash no momento da F5 (multi-provider) / sanitizacao, reaproveitando o mesmo desenho.
+3. Nao atrasa F1 (license server). Fica como **trilha paralela de produto WppTrack** + item explicito de porte na F5.
+
+Escopo minimo quando for implementado no WppTrack:
+- Campo(s) de telefone de alerta por workspace/instancia (opt-in)
+- Detector de evento de desconexao (webhook Uazapi `connection` / status != connected)
+- Debounce (nao spam a cada flap de QR)
+- Envio WhatsApp (e opcional e-mail) para o numero cadastrado com link/instrucao de reconectar
+- Secrets so backend; falha de envio nao derruba ingestao de leads
+- Testes de debounce + idempotencia do alerta
 
 ## Scope Check
 
@@ -43,14 +94,15 @@ A spec cobre multiplos subsistemas. Este e um **plano mestre faseado**. Cada fas
 
 | Fase | Repo alvo | Entrega testavel | Executor |
 |---|---|---|---|
-| F0 Docs/repo | `nod-rastrackdash-wpp` | Spec+plano+README | Orquestrador / Claude docs |
+| F0 Docs/repo | `nod-rastrackdash-wpp` | Spec+plano+README+VPS researched | Orquestrador / Claude docs |
 | F1 License server | `dash-com-ia` | activate/heartbeat/webhook/admin | Codex backend |
 | F2 Notificacoes chave | `dash-com-ia` | e-mail + WhatsApp delivery/reenvio | Codex backend |
 | F3 Sanitizacao template | ambos | script export + secret scan + first code push | Codex + gate Samuel |
 | F4 License client | `nod-rastrackdash-wpp` | estados ativo/grace/soft-lock | Codex backend + Claude UI |
-| F5 WhatsApp multi-provider | ambos (broker no privado) | Uazapi/NOD/WAHA/Z-API + webhooks | Codex backend |
+| F5 WhatsApp multi-provider | ambos (broker no privado) | Uazapi/NOD/WAHA/Z-API + webhooks + **porte do aviso desconexao** | Codex backend |
 | F6 Backoffice + whitelabel + AI docs | `nod-rastrackdash-wpp` | onboarding completo | Claude frontend + Codex |
 | F7 Homologacao + tag v1.0.0 | ambos | matriz aceite spec §15 | Samuel + agentes |
+| **P-WA** (paralela) | `dash-com-ia` WppTrack prod | aviso desconexao WhatsApp no produto cliente | Codex/Claude — **antes** do porte F5 |
 
 ## Gates humanos (Samuel)
 
@@ -476,10 +528,49 @@ Unificar conexoes WhatsApp:
 - [ ] Garantir registry Umbler/Gupshup nao removido na sanitizacao (teste de regressao no script F3)
 - [ ] Docs de como plugar novo parser
 
+### Task 5.7: Portar aviso de desconexao WhatsApp (depois do WppTrack)
+
+**Pre-requisito:** feature ja estavel no `dash-com-ia` (trilha **P-WA** paralela — ver secao acima).
+
+- [ ] Trazer modelo/API/UI de telefone de alerta + detector de disconnect + debounce
+- [ ] Funcionar para NOD API e Uazapi BYO no template (e extensivel WAHA/Z-API)
+- [ ] Docs no setup do aluno: "cadastre um numero para ser avisado se o WhatsApp cair"
+- [ ] Testes de regressao do porte
+- [ ] Se P-WA ainda nao tiver sido feita, **nao inventar** no template — completar P-WA primeiro
+
 **Aceite F5:**
 - pelo menos Uazapi BYO + NOD broker + 1 adapter novo (WAHA ou Z-API) testaveis
 - webhooks multi-provider ok
 - zero secret PalmUP no template
+- aviso de desconexao portado **somente se** P-WA ja estiver em producao no WppTrack
+
+---
+
+# Trilha paralela P-WA — Aviso desconexao no WppTrack (antes do template)
+
+**Repo:** `dash-com-ia` (produto cliente final em producao)  
+**Ordem:** pode rodar **em paralelo a F1/F2**, mas **antes** da Task 5.7  
+**Executor:** Codex backend + Claude UI  
+**Gate:** commit/push/deploy WppTrack com "autorizado" separado
+
+### Task P-WA.1: Desenho rapido no WppTrack
+- [ ] Onde guardar telefone de alerta (workspace vs instancia WhatsApp)
+- [ ] Qual evento Uazapi/NOD indica desconexao de forma confiavel
+- [ ] Canal de envio (WA outbound admin PalmUP e/ou e-mail Brevo ja existente)
+- [ ] Debounce (ex.: no maximo 1 alerta / N minutos por instancia)
+
+### Task P-WA.2: Implementar + testar no WppTrack
+- [ ] API + UI para cadastrar/editar telefone de alerta (opt-in)
+- [ ] Handler de status/connection → enqueue alerta
+- [ ] Mensagem clara: "WhatsApp desconectado — reconecte no painel"
+- [ ] Testes unitarios + cenario de flap de conexao
+- [ ] Homologar em staging/prod WppTrack com gate Samuel
+
+### Task P-WA.3: So depois → Task 5.7 no RastrackDash
+
+**Aceite P-WA:**
+- cliente WppTrack cadastra telefone e recebe aviso real ao desconectar
+- sem spam; sem secret no frontend; falha de alerta nao quebra webhook de leads
 
 ---
 
@@ -506,7 +597,7 @@ Env/painel:
 - [ ] `scripts/setup.mjs`: .env from example, prisma migrate, create admin
 - [ ] Checklist: db ok, license active, meta connected, first workspace
 - [ ] Docs `docs/setup/*.md` com comandos e saida esperada
-- [ ] `docs/setup/vps.md` com sizing + perguntas clientes/leads/dia + placeholders afiliado
+- [ ] `docs/setup/vps.md` com sizing **pesquisado** (Dokploy 2GB/30GB piso; produto minima 4GB; recomendada 8GB) + perguntas clientes/leads/dia + placeholders afiliado
 - [ ] `docs/setup/billing/README.md` guia gateway
 - [ ] `docs/setup/meta-manual.md` adaptado do existente
 - [ ] Atualizar AGENTS.md/CLAUDE.md com fluxo real pos-F3
@@ -576,7 +667,8 @@ Checklist executavel:
 | §7 Meta manual | F3 keep + F6 docs |
 | §8 billing guia | F6.3 |
 | §9 backoffice + 9.1 Brevo BYO | F3.2 + F6.1 |
-| §10 AI-first + VPS | F0.2 + F6.3 |
+| §10 AI-first + VPS | F0.2 + F6.3 + `docs/setup/vps.md` pesquisado |
+| Aviso desconexao WA (Samuel revisao plano) | P-WA no WppTrack primeiro → Task 5.7 porte |
 | §11 whitelabel | F6.2 |
 | §12 seguranca | global + F1/F3 |
 | §15 aceite | F7.1 |
