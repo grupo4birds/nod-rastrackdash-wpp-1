@@ -2,7 +2,7 @@
 
 Data: 2026-08-19
 
-Status: Rascunho - decisoes do brainstorming fechadas pelo Samuel (turnos 1 a 7), incluindo modelo comercial de assinatura, estado bloqueado (soft-lock), nome do produto, provedores WhatsApp multi-caminho, whitelabel de branding, binding de licenca a conta (anti-compartilhamento) e modulo de notificacao de entrega de chave; restam 6 pendencias menores nao bloqueantes (secao 16).
+Status: APROVADA pelo Samuel em 2026-08-19 (turnos 1 a 7 + revisao final). Decisoes fechadas: modelo comercial de assinatura anual, soft-lock, nome RastrackDash, provedores WhatsApp multi-caminho, whitelabel, binding 1 licenca=1 conta, modulo de notificacao de entrega de chave. Restam 6 pendencias menores nao bloqueantes (secao 16) a fechar no plano/implementacao com as recomendacoes ja registradas quando o Samuel nao decidir o contrario.
 
 ## 1. Objetivo e Publico
 
