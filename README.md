@@ -1,29 +1,48 @@
-# RastrackDash
+# RastrackDash student self-host template
 
-Template educacional da PalmUP — base multi-tenant para o aluno operar rastreamento WhatsApp → Meta CAPI para os próprios clientes.
+`nod-rastrackdash-wpp` is a self-hosted, multi-tenant dashboard for agencies that run WhatsApp lead campaigns with Meta Ads. It brings together campaign performance, WhatsApp leads, conversion events, and operational diagnostics.
 
-> **Status:** design **aprovado** + plano de implementação publicado.  
-> Este repositório ainda está em fase de documentação. O **código do produto** entra a partir da Fase 3 do plano (export sanitizado do WppTrack).
+## Status
 
-## Documentos
+**G4 code landed.** This public student template is a sanitized export of the private WppTrack codebase. PalmUP's license server remains private; no PalmUP license server, Guru, or Asaas billing integration is included in this repository. A license **client** is planned for F4.
 
-| Doc | Descrição |
-|---|---|
-| [Design Spec (APROVADA)](./docs/superpowers/specs/2026-08-19-nod-rastrackdash-wpp-student-edition-design.md) | Decisões de produto e arquitetura |
-| [Implementation Plan](./docs/superpowers/plans/2026-08-19-rastrackdash-student-edition-implementation.md) | Plano faseado F0–F7 |
-| [AI Agents guide](./docs/AI_AGENTS.md) | Memória para IAs (vibe coding) |
-| [Setup](./docs/setup/README.md) | Guias de instalação |
-| [Customization](./docs/CUSTOMIZATION.md) | O que é seguro editar |
+## Quick start
 
-## Nomes
+Prerequisites: Node.js 20+, pnpm, Docker, and Docker Compose.
 
-- **Produto:** RastrackDash  
-- **Repositório:** `nod-rastrackdash-wpp`
+```bash
+pnpm install
+docker compose up -d postgres redis
+cp .env.example .env
+pnpm --filter @wpptrack/api prisma:generate
+pnpm --filter @wpptrack/api exec prisma migrate dev --schema prisma/schema.prisma
+```
 
-## Licença de uso
+Start the API and web app in separate terminals:
 
-Acesso ao código exige **assinatura ativa** (chave após compra na Guru). Detalhes na design spec.
+```bash
+pnpm --filter @wpptrack/api dev
+pnpm --filter @wpptrack/web dev
+```
 
-## Próximo passo de engenharia
+The web app runs at `http://localhost:3000` and the API at `http://localhost:3333` by default.
 
-Fase 1 do plano: license server no WppTrack (`dash-com-ia`, privado), em branch limpa a partir de `main`.
+## Bring your own services
+
+- SMTP provider for email delivery
+- Uazapi instance for WhatsApp connectivity
+- Meta System User access token, configured manually
+
+## Security
+
+- Never commit your `.env` file.
+- Replace and rotate every `replace-me-*` placeholder before deploying.
+- Keep service credentials and Meta tokens on the server; do not expose them to the frontend.
+
+## Documentation
+
+- [Student edition design spec](docs/superpowers/specs/2026-08-19-nod-rastrackdash-wpp-student-edition-design.md)
+- [Implementation plan](docs/superpowers/plans/2026-08-19-rastrackdash-student-edition-implementation.md)
+- [Guide for AI agents](docs/AI_AGENTS.md)
+- [Setup guides](docs/setup/README.md)
+- [Customization guide](docs/CUSTOMIZATION.md)

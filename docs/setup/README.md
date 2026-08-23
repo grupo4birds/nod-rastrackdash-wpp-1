@@ -2,14 +2,14 @@
 
 Indice dos guias de instalacao do RastrackDash.
 
-> Enquanto o repositorio estiver em fase de documentacao (antes da exportacao do codigo na Fase 3 do plano), estes guias descrevem o **alvo**. Comandos de app so devem ser executados depois que o codigo sanitizado existir no repo.
+> O codigo sanitizado do produto esta presente neste repositorio desde G4. Estes guias agora descrevem a configuracao da instancia self-hosted do aluno. F4 adicionara o cliente de licenca; o license server PalmUP continua privado e nao faz parte deste repo.
 
 ## Ordem alvo
 
 1. [VPS](./vps.md) — dimensionamento e providers
-2. Env e secrets (`.env.example` quando o codigo existir)
+2. Env e secrets (`.env.example`)
 3. Banco + migrations
-4. Ativacao de licenca
+4. Cliente de licenca (F4; nao ha license server neste repo)
 5. Admin boot + primeiro workspace/cliente
 6. Meta manual (System User)
 7. WhatsApp (Uazapi BYO / NOD API / WAHA / Z-API)

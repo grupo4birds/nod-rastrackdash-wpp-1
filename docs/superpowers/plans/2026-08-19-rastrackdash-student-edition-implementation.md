@@ -183,7 +183,7 @@ scripts/sanitize-from-wpptrack.mjs # vive no privado; output vai pro publico
 
 - [ ] Garantir Status APROVADA no repo publico (sincronizar com copia local se necessario)
 - [ ] Atualizar README com link do plano de implementacao
-- [ ] Commit no repo publico (docs only) — pedir "autorizado" ao Samuel se ainda nao houver permissao aberta para docs
+- [x] G4: importar o codigo sanitizado no repo publico (sem modulos privados)
 
 **Commit sugerido:** `docs: mark student edition spec approved and link implementation plan`
 

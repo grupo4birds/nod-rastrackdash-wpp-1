@@ -1,0 +1,2151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WorkspaceRole {
+  owner
+  admin
+  member
+}
+
+enum PlatformRole {
+  platform_owner
+  platform_operator
+}
+
+enum AuthProvider {
+  email
+  google
+}
+
+enum WorkspaceInviteStatus {
+  pending
+  sent
+  failed
+  accepted
+  revoked
+  expired
+}
+
+enum WorkspaceOperationalStatus {
+  active
+  blocked
+}
+
+enum WhatsappInstanceStatus {
+  pending_payment
+  active
+  disconnected
+  suspended
+  error
+}
+
+enum DiagnosticSource {
+  meta
+  uazapi
+  umbler
+  gupshup
+  asaas
+  external_mysql
+  internal
+}
+
+enum DiagnosticSeverity {
+  info
+  warning
+  error
+  critical
+}
+
+enum PaymentChargeStatus {
+  pending
+  paid
+  failed
+  canceled
+  expired
+}
+
+enum WhatsappInstanceActivationStatus {
+  pending_payment
+  active
+  canceled
+  expired
+}
+
+enum SubscriptionPlanKind {
+  standard
+  custom
+  exempt
+  legacy_protected
+}
+
+enum SubscriptionPlanVisibility {
+  public
+  private
+}
+
+enum WorkspaceSubscriptionContractStatus {
+  draft
+  awaiting_payment
+  active
+  past_due
+  grace_period
+  cancel_at_period_end
+  suspended
+  canceled
+  exempt
+  legacy_protected
+}
+
+enum SubscriptionPaymentMethod {
+  unknown
+  credit_card
+  pix
+}
+
+enum WorkspaceBillingProfileStatus {
+  incomplete
+  valid
+  invalid
+}
+
+enum WhatsappSeatStatus {
+  reserved
+  active
+  suspended
+  released
+}
+
+enum WhatsappSeatProvider {
+  uazapi
+  cloud_api
+  umbler
+  gupshup
+}
+
+enum BillingProviderEventStatus {
+  received
+  processing
+  processed
+  ignored
+  failed
+}
+
+enum BillingInvoiceStatus {
+  not_configured
+  pending_configuration
+  scheduled
+  issued
+  authorized
+  canceled
+  failed
+  rejected
+}
+
+enum ConversionTriggerType {
+  keyword
+  whatsapp_label
+  provider_automation
+  message_phrase
+  structured_catalog
+}
+
+enum ConversionMatchMode {
+  contains
+  exact
+}
+
+enum ProviderConversionRuleMode {
+  observation
+  production
+}
+
+enum ProviderConversionEngineMode {
+  legacy
+  shadow
+  canonical
+}
+
+enum ProviderConversionMessageAuthorScope {
+  team
+  contact
+  both
+}
+
+enum ProviderConversionExecutionStatus {
+  observed
+  eligible
+  materialized
+  duplicate
+  blocked
+  failed
+}
+
+enum PurchaseReviewStatus {
+  recognized
+  awaiting_data
+  review_required
+  approved
+  sent
+  duplicate
+  rejected
+  failed
+  corrected_after_send
+}
+
+enum PurchaseReviewSourceType {
+  provider_message
+  provider_automation
+}
+
+enum LeadStatus {
+  new
+  active
+  qualified
+  converted
+  lost
+}
+
+enum MetaAssetSyncStatus {
+  pending
+  syncing
+  synced
+  error
+}
+
+enum MetaConversionDestinationStatus {
+  needs_configuration
+  configured
+  error
+}
+
+enum MetaCredentialSource {
+  oauth
+  manual
+}
+
+enum MetaCredentialStatus {
+  pending
+  active
+  validation_required
+  expired
+  revoked
+  error
+  paused
+}
+
+enum MetaBusinessConnectionStatus {
+  pending
+  active
+  validation_required
+  token_expired
+  missing_permission
+  destination_invalid
+  error
+  paused
+}
+
+enum MetaWhatsappClassification {
+  auto_whatsapp
+  creative_whatsapp
+  detected_by_leads
+  manual_include
+  manual_exclude
+  needs_review
+  not_whatsapp
+}
+
+enum MetaAdDestinationAssignmentSource {
+  automatic
+  manual
+}
+
+enum AuthActionTokenType {
+  password_reset
+  email_verification
+  account_activation
+}
+
+enum InboundWebhookProvider {
+  umbler
+  gupshup
+  uazapi
+}
+
+enum InboundWebhookParserReleaseStatus {
+  observation_only
+  certified
+  retired
+}
+
+enum InboundWebhookConnectionStatus {
+  observation
+  production
+  paused
+}
+
+enum InboundWebhookChannelStatus {
+  discovered
+  active
+  paused
+}
+
+enum InboundWebhookDeliveryStatus {
+  pending
+  queued
+  processing
+  processed
+  failed
+}
+
+enum InboundWebhookDeliveryPurpose {
+  message_observation
+  conversion_automation
+}
+
+enum InboundWebhookEventClassification {
+  eligible_route_resolved
+  eligible_route_unresolved
+  ignored_no_ctwa
+  ignored_outbound
+  ignored_private
+  ignored_empty_template
+  ignored_untracked_lead
+  unsupported_event
+  invalid_payload
+}
+
+enum InboundWebhookReplayStatus {
+  queued
+  processing
+  completed
+  completed_with_failures
+  failed
+}
+
+enum InboundWebhookReplayItemStatus {
+  queued
+  processing
+  materialized
+  duplicate
+  skipped
+  failed
+}
+
+enum InboundWebhookProductionItemStatus {
+  queued
+  processing
+  materialized
+  duplicate
+  failed
+}
+
+enum InboundWebhookReplaySelection {
+  canary_1
+  canary_5
+  canary_10
+  remaining
+}
+
+model User {
+  id              String        @id @default(cuid())
+  email           String        @unique
+  name            String?
+  passwordHash    String?
+  authProvider    AuthProvider  @default(email)
+  googleId        String?       @unique
+  emailVerifiedAt DateTime?
+  platformRole    PlatformRole?
+  lastWorkspaceId String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  memberships                      WorkspaceMember[]
+  sessions                         AuthSession[]
+  actionTokens                     AuthActionToken[]
+  lastWorkspace                    Workspace?                        @relation("UserLastWorkspace", fields: [lastWorkspaceId], references: [id], onDelete: SetNull)
+  auditLogs                        AuditLog[]
+  createdMetaCredentials           MetaCredential[]                  @relation("MetaCredentialCreator")
+  createdMetaBusinessConnections   MetaBusinessConnection[]          @relation("MetaBusinessConnectionCreator")
+  createdMetaDestinations          MetaConversionDestination[]       @relation("MetaConversionDestinationCreator")
+  createdMetaAccountDestinations   MetaReportingAccountDestination[] @relation("MetaReportingAccountDestinationCreator")
+  createdMetaAdAssignments         MetaAdDestinationAssignment[]     @relation("MetaAdDestinationAssignmentCreator")
+  certifiedInboundWebhookParsers   InboundWebhookParserRelease[]     @relation("InboundWebhookParserReleaseCertifier")
+  createdInboundWebhookConnections InboundWebhookConnection[]        @relation("InboundWebhookConnectionCreator")
+  createdInboundWebhookRoutes      InboundWebhookChannelRoute[]      @relation("InboundWebhookChannelRouteCreator")
+  requestedInboundWebhookReplays   InboundWebhookReplayBatch[]       @relation("InboundWebhookReplayRequester")
+  createdProviderConversionRules   ProviderConversionRuleConfig[]    @relation("ProviderConversionRuleCreator")
+  decidedPurchaseReviews           PurchaseReview[]                  @relation("PurchaseReviewDecisionActor")
+  purchaseValueAdjustments         PurchaseValueAdjustment[]         @relation("PurchaseValueAdjustmentActor")
+
+  @@index([lastWorkspaceId])
+}
+
+model Workspace {
+  id                String                     @id @default(cuid())
+  name              String
+  slug              String                     @unique
+  asaasCustomerId   String?
+  operationalStatus WorkspaceOperationalStatus @default(active)
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+
+  members                          WorkspaceMember[]
+  invites                          WorkspaceInvite[]
+  whatsappInstances                WhatsappInstance[]
+  uazapiChatLabelStates            UazapiChatLabelState[]
+  diagnosticEvents                 DiagnosticEvent[]
+  webhookLogs                      WebhookLog[]
+  integrationLogs                  IntegrationLog[]
+  conversionEventLogs              ConversionEventLog[]
+  jobAttempts                      JobAttempt[]
+  auditLogs                        AuditLog[]
+  conversionRules                  ConversionRule[]
+  funnelStageConfigurations        FunnelStageConfiguration[]
+  leads                            Lead[]
+  metaIntegration                  MetaIntegration?
+  metaCredentials                  MetaCredential[]
+  metaBusinessConnections          MetaBusinessConnection[]
+  metaAssetSnapshots               MetaAssetSnapshot[]
+  metaConversionDestinations       MetaConversionDestination[]
+  metaReportingAccounts            MetaReportingAccount[]
+  metaReportingAccountDestinations MetaReportingAccountDestination[]
+  metaAdDestinationAssignments     MetaAdDestinationAssignment[]
+  metaCampaigns                    MetaCampaign[]
+  metaCampaignDailyInsights        MetaCampaignDailyInsight[]
+  metaAdSets                       MetaAdSet[]
+  metaAdSetDailyInsights           MetaAdSetDailyInsight[]
+  metaAds                          MetaAd[]
+  metaAdDailyInsights              MetaAdDailyInsight[]
+  externalDataConnectors           ExternalDataConnector[]
+  externalIngestionRecords         ExternalIngestionRecord[]
+  activeSessions                   AuthSession[]                        @relation("AuthSessionActiveWorkspace")
+  supportSessions                  AuthSession[]                        @relation("AuthSessionSupportWorkspace")
+  lastSelectedByUsers              User[]                               @relation("UserLastWorkspace")
+  actionTokens                     AuthActionToken[]
+  inboundWebhookConnections        InboundWebhookConnection[]
+  inboundWebhookChannels           InboundWebhookChannel[]
+  inboundWebhookChannelRoutes      InboundWebhookChannelRoute[]
+  inboundWebhookDeliveries         InboundWebhookDelivery[]
+  inboundWebhookEvents             InboundWebhookEvent[]
+  inboundWebhookReplayBatches      InboundWebhookReplayBatch[]
+  inboundWebhookReplayItems        InboundWebhookReplayItem[]
+  inboundWebhookProductionItems    InboundWebhookProductionItem[]
+  providerConversionRules          ProviderConversionRuleConfig[]
+  providerConversionRuleChannels   ProviderConversionRuleChannel[]
+  providerConversionRuleEndpoints  ProviderConversionRuleEndpoint[]
+  providerConversionExecutions     ProviderConversionRuleExecution[]
+  providerConversionDecisions      ProviderConversionDecisionAudit[]
+  providerConversionComparisons    ProviderConversionShadowComparison[]
+  conversionCatalogs               ConversionCatalog[]
+  conversionCatalogAttributes      ConversionCatalogAttribute[]
+  conversionCatalogVariants        ConversionCatalogVariant[]
+  purchaseReviews                  PurchaseReview[]
+  purchaseReviewItems              PurchaseReviewItem[]
+  purchaseValueAdjustments         PurchaseValueAdjustment[]
+  opsAlertSettings                 WorkspaceOpsAlertSettings?
+  opsAlertDeliveries               WorkspaceOpsAlertDelivery[]
+
+  @@index([asaasCustomerId])
+  @@index([operationalStatus])
+}
+
+model WorkspaceOpsAlertSettings {
+  id                    String   @id @default(cuid())
+  workspaceId           String   @unique
+  enabled               Boolean  @default(false)
+  alertPhonesE164       String[] @default([])
+  alertPhoneE164        String?
+  disconnectAlerts      Boolean  @default(true)
+  webhookSilenceAlerts  Boolean  @default(true)
+  silenceThresholdHours Int      @default(24)
+  debounceHours         Int      @default(6)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model WorkspaceOpsAlertDelivery {
+  id          String   @id @default(cuid())
+  workspaceId String
+  alertKey    String
+  channel     String
+  status      String
+  detail      String?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, alertKey, createdAt])
+  @@index([workspaceId, createdAt])
+}
+
+model WorkspaceMember {
+  id               String        @id @default(cuid())
+  workspaceId      String
+  userId           String
+  role             WorkspaceRole
+  canManageMembers Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+model WhatsappInstance {
+  id                     String                 @id @default(cuid())
+  workspaceId            String
+  name                   String
+  provider               String
+  providerInstanceId     String?
+  providerTokenEncrypted String?
+  providerTokenIv        String?
+  providerTokenTag       String?
+  webhookTokenHash       String?
+  status                 WhatsappInstanceStatus @default(pending_payment)
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+
+  workspace             Workspace                    @relation(fields: [workspaceId], references: [id])
+  leads                 Lead[]
+  inboundWebhookChannel InboundWebhookChannel?
+  uazapiChatLabelStates UazapiChatLabelState[]
+
+  @@unique([workspaceId, id])
+  @@index([workspaceId])
+  @@index([providerInstanceId])
+}
+
+model UazapiChatLabelState {
+  id                 String   @id @default(cuid())
+  workspaceId        String
+  whatsappInstanceId String
+  contactKey         String
+  labelIds           String[] @default([])
+  updatedAt          DateTime @updatedAt
+
+  workspace        Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  whatsappInstance WhatsappInstance @relation(fields: [whatsappInstanceId], references: [id], onDelete: Restrict)
+
+  @@unique([workspaceId, whatsappInstanceId, contactKey])
+  @@index([workspaceId, whatsappInstanceId])
+}
+
+model AuthSession {
+  id                        String    @id @default(cuid())
+  userId                    String
+  activeWorkspaceId         String?
+  supportWorkspaceId        String?
+  supportWorkspaceStartedAt DateTime?
+  refreshHash               String    @unique
+  userAgent                 String?
+  ipAddress                 String?
+  expiresAt                 DateTime
+  revokedAt                 DateTime?
+  createdAt                 DateTime  @default(now())
+
+  user             User       @relation(fields: [userId], references: [id])
+  activeWorkspace  Workspace? @relation("AuthSessionActiveWorkspace", fields: [activeWorkspaceId], references: [id], onDelete: SetNull)
+  supportWorkspace Workspace? @relation("AuthSessionSupportWorkspace", fields: [supportWorkspaceId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([userId, activeWorkspaceId])
+  @@index([activeWorkspaceId])
+  @@index([supportWorkspaceId])
+}
+
+model AuthActionToken {
+  id          String              @id @default(cuid())
+  userId      String
+  workspaceId String?
+  type        AuthActionTokenType
+  tokenHash   String              @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime            @default(now())
+
+  user      User       @relation(fields: [userId], references: [id])
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+
+  @@index([userId, type, usedAt])
+  @@index([workspaceId, type, usedAt])
+  @@index([type, expiresAt])
+}
+
+
+model WorkspaceInvite {
+  id          String                @id @default(cuid())
+  workspaceId String
+  email       String
+  role        WorkspaceRole
+  status      WorkspaceInviteStatus @default(pending)
+  tokenHash   String                @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime              @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@index([workspaceId, email])
+}
+
+model WebhookLog {
+  id                 String           @id @default(cuid())
+  workspaceId        String?
+  whatsappInstanceId String?
+  source             DiagnosticSource
+  eventType          String
+  externalEventId    String?
+  status             String
+  receivedAt         DateTime         @default(now())
+  processedAt        DateTime?
+  leadId             String?
+  phoneHash          String?
+  campaignId         String?
+  adSetId            String?
+  adId               String?
+  jobId              String?
+  errorCode          String?
+  errorMessage       String?
+  summaryPayload     Json?
+  rawPayloadRef      String?
+  idempotencyKey     String?          @unique
+
+  workspace        Workspace?        @relation(fields: [workspaceId], references: [id])
+  diagnosticEvents DiagnosticEvent[]
+
+  @@index([workspaceId, source, status, receivedAt])
+  @@index([workspaceId, whatsappInstanceId, receivedAt])
+}
+
+model IntegrationLog {
+  id                   String           @id @default(cuid())
+  workspaceId          String?
+  source               DiagnosticSource
+  operation            String
+  status               String
+  startedAt            DateTime         @default(now())
+  finishedAt           DateTime?
+  durationMs           Int?
+  requestSummary       Json?
+  responseSummary      Json?
+  httpStatus           Int?
+  providerRequestId    String?
+  providerErrorCode    String?
+  providerErrorMessage String?
+  leadId               String?
+  campaignId           String?
+  adSetId              String?
+  adId                 String?
+  jobId                String?
+
+  workspace        Workspace?        @relation(fields: [workspaceId], references: [id])
+  diagnosticEvents DiagnosticEvent[]
+
+  @@index([workspaceId, source, status, startedAt])
+  @@index([providerRequestId])
+}
+
+model ConversionEventLog {
+  id                          String    @id @default(cuid())
+  workspaceId                 String?
+  leadId                      String?
+  phoneHash                   String?
+  sourceTrigger               String
+  eventName                   String
+  status                      String
+  pixelId                     String?
+  pageId                      String?
+  eventId                     String?
+  metaAccountId               String?
+  campaignId                  String?
+  adSetId                     String?
+  adId                        String?
+  ctwaClid                    String?
+  attributionStatus           String?
+  dedupeKey                   String?   @unique
+  eventOccurredAt             DateTime  @default(now())
+  customerIdentityKey         String?
+  businessSource              String    @default("paid")
+  purchaseKind                String?
+  valueSource                 String?
+  externalConnectorId         String?
+  sourceEventId               String?
+  sentAt                      DateTime?
+  sourcePayload               Json?
+  providerRequestPayload      Json?
+  providerResponseSummary     Json?
+  customData                  Json?
+  valueCents                  Int?
+  currency                    String?
+  contentName                 String?
+  errorCode                   String?
+  errorMessage                String?
+  jobId                       String?
+  metaBusinessConnectionId    String?
+  metaConversionDestinationId String?
+  createdAt                   DateTime  @default(now())
+
+  workspace                 Workspace?                 @relation(fields: [workspaceId], references: [id])
+  externalConnector         ExternalDataConnector?     @relation(fields: [externalConnectorId], references: [id], onDelete: SetNull)
+  purchaseReview            PurchaseReview?
+  purchaseValueAdjustments  PurchaseValueAdjustment[]
+  metaBusinessConnection    MetaBusinessConnection?    @relation(fields: [metaBusinessConnectionId], references: [id], onDelete: SetNull)
+  metaConversionDestination MetaConversionDestination? @relation(fields: [metaConversionDestinationId], references: [id], onDelete: SetNull)
+  diagnosticEvents          DiagnosticEvent[]
+
+  @@index([workspaceId, status, createdAt])
+  @@index([workspaceId, eventOccurredAt])
+  @@index([workspaceId, eventName, eventOccurredAt])
+  @@index([workspaceId, adId])
+  @@index([workspaceId, metaBusinessConnectionId])
+  @@index([workspaceId, metaConversionDestinationId])
+  @@index([leadId])
+  @@index([externalConnectorId, sourceEventId])
+}
+
+model ExternalDataConnector {
+  id                        String    @id @default(cuid())
+  workspaceId               String
+  name                      String
+  provider                  String
+  status                    String    @default("draft")
+  timezone                  String    @default("America/Sao_Paulo")
+  sslMode                   String    @default("required")
+  credentialsEncrypted      String
+  credentialsIv             String
+  credentialsTag            String
+  syncEnabled               Boolean   @default(false)
+  shadowMode                Boolean   @default(true)
+  capiSendEnabled           Boolean   @default(false)
+  purchaseAverageValueCents Int?
+  defaultCurrency           String?   @default("BRL")
+  lastConnectionTestAt      DateTime?
+  lastConnectionStatus      String?
+  lastSyncStartedAt         DateTime?
+  lastSyncCompletedAt       DateTime?
+  lastSyncStatus            String?
+  lastSyncErrorCode         String?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  workspace        Workspace                 @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  cursors          ExternalSyncCursor[]
+  ingestionRecords ExternalIngestionRecord[]
+  conversionEvents ConversionEventLog[]
+  capiCutovers     ExternalCapiCutover[]
+
+  @@index([workspaceId, status])
+  @@index([syncEnabled, status, updatedAt])
+}
+
+model ExternalCapiCutover {
+  id                 String    @id @default(cuid())
+  workspaceId        String
+  connectorId        String
+  eventType          String
+  status             String    @default("active")
+  activatedAt        DateTime
+  activatedByUserId  String
+  shadowArchivedRows Int       @default(0)
+  rolledBackAt       DateTime?
+  rolledBackByUserId String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  connector ExternalDataConnector @relation(fields: [connectorId], references: [id], onDelete: Cascade)
+
+  @@index([connectorId, status])
+  @@index([workspaceId, eventType, activatedAt])
+}
+
+model ExternalSyncCursor {
+  id             String    @id @default(cuid())
+  connectorId    String
+  stream         String
+  lastExternalId String?
+  lastUpdatedAt  DateTime?
+  lastSyncedAt   DateTime?
+  metadata       Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  connector ExternalDataConnector @relation(fields: [connectorId], references: [id], onDelete: Cascade)
+
+  @@unique([connectorId, stream])
+  @@index([connectorId, lastSyncedAt])
+}
+
+model ExternalIngestionRecord {
+  id                   String    @id @default(cuid())
+  workspaceId          String
+  connectorId          String
+  stream               String
+  externalRowId        String
+  dedupeKey            String    @unique
+  eventType            String?
+  status               String
+  occurredAt           DateTime?
+  leadId               String?
+  conversionEventLogId String?
+  duplicateCount       Int       @default(0)
+  errorCode            String?
+  errorMessage         String?
+  summaryPayload       Json?
+  firstReceivedAt      DateTime  @default(now())
+  lastReceivedAt       DateTime  @default(now())
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  workspace Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  connector ExternalDataConnector @relation(fields: [connectorId], references: [id], onDelete: Cascade)
+
+  @@index([connectorId, stream, externalRowId])
+  @@index([workspaceId, status, occurredAt])
+  @@index([conversionEventLogId])
+}
+
+model JobAttempt {
+  id                String           @id @default(cuid())
+  workspaceId       String?
+  queueName         String
+  jobId             String
+  jobName           String
+  attemptNumber     Int
+  status            String
+  scheduledAt       DateTime?
+  startedAt         DateTime?
+  finishedAt        DateTime?
+  nextRetryAt       DateTime?
+  source            DiagnosticSource
+  relatedEntityType String?
+  relatedEntityId   String?
+  errorCode         String?
+  errorMessage      String?
+  summaryPayload    Json?
+  createdAt         DateTime         @default(now())
+
+  workspace        Workspace?        @relation(fields: [workspaceId], references: [id])
+  diagnosticEvents DiagnosticEvent[]
+
+  @@index([workspaceId, source, status, createdAt])
+  @@index([jobId])
+}
+
+model DiagnosticEvent {
+  id                   String             @id @default(cuid())
+  workspaceId          String?
+  source               DiagnosticSource
+  eventType            String
+  severity             DiagnosticSeverity
+  status               String
+  occurredAt           DateTime           @default(now())
+  title                String
+  message              String
+  leadId               String?
+  phoneHash            String?
+  campaignId           String?
+  adSetId              String?
+  adId                 String?
+  jobId                String?
+  errorCode            String?
+  summaryPayload       Json?
+  webhookLogId         String?
+  integrationLogId     String?
+  conversionEventLogId String?
+  jobAttemptId         String?
+  createdAt            DateTime           @default(now())
+
+  workspace          Workspace?          @relation(fields: [workspaceId], references: [id])
+  webhookLog         WebhookLog?         @relation(fields: [webhookLogId], references: [id])
+  integrationLog     IntegrationLog?     @relation(fields: [integrationLogId], references: [id])
+  conversionEventLog ConversionEventLog? @relation(fields: [conversionEventLogId], references: [id])
+  jobAttempt         JobAttempt?         @relation(fields: [jobAttemptId], references: [id])
+
+  @@index([workspaceId, source, status, occurredAt])
+  @@index([workspaceId, severity, occurredAt])
+  @@index([eventType])
+  @@index([leadId])
+  @@index([phoneHash])
+  @@index([campaignId])
+  @@index([adSetId])
+  @@index([adId])
+  @@index([jobId])
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  workspaceId   String?
+  actorUserId   String?
+  actorType     String
+  action        String
+  targetType    String
+  targetId      String
+  reason        String?
+  sourceIp      String?
+  resultStatus  String
+  beforeSummary Json?
+  afterSummary  Json?
+  createdAt     DateTime @default(now())
+
+  workspace Workspace? @relation(fields: [workspaceId], references: [id])
+  actorUser User?      @relation(fields: [actorUserId], references: [id])
+
+  @@index([workspaceId, createdAt])
+  @@index([actorUserId])
+  @@index([targetType, targetId])
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+model ConversionRule {
+  id                 String                @id @default(cuid())
+  workspaceId        String
+  name               String
+  triggerType        ConversionTriggerType
+  triggerValue       String
+  matchMode          ConversionMatchMode   @default(contains)
+  eventName          String
+  pixelId            String?
+  defaultValueCents  Int?
+  defaultCurrency    String?
+  defaultContentName String?
+  defaultItems       Json?
+  active             Boolean               @default(true)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  workspace      Workspace                     @relation(fields: [workspaceId], references: [id])
+  providerConfig ProviderConversionRuleConfig?
+
+  @@unique([workspaceId, id])
+  @@index([workspaceId, active])
+  @@index([workspaceId, triggerType, triggerValue])
+}
+
+model ProviderConversionRuleConfig {
+  id                    String                                @id @default(cuid())
+  workspaceId           String
+  conversionRuleId      String
+  connectionId          String
+  parserReleaseId       String
+  mode                  ProviderConversionRuleMode            @default(observation)
+  messageTriggerPhrases String[]                              @default([])
+  messageAuthorScope    ProviderConversionMessageAuthorScope?
+  productionActivatedAt DateTime?
+  removedAt             DateTime?
+  createdByUserId       String?
+  createdAt             DateTime                              @default(now())
+  updatedAt             DateTime                              @updatedAt
+
+  workspace       Workspace                            @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  conversionRule  ConversionRule                       @relation(fields: [workspaceId, conversionRuleId], references: [workspaceId, id], onDelete: Restrict, map: "ProviderConversionRuleConfig_conversionRuleId_fkey")
+  connection      InboundWebhookConnection             @relation(fields: [workspaceId, connectionId], references: [workspaceId, id], onDelete: Restrict, map: "ProviderConversionRuleConfig_connectionId_fkey")
+  parserRelease   InboundWebhookParserRelease          @relation(fields: [parserReleaseId], references: [id], onDelete: Restrict)
+  createdBy       User?                                @relation("ProviderConversionRuleCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  channels        ProviderConversionRuleChannel[]
+  endpoint        ProviderConversionRuleEndpoint?
+  catalog         ConversionCatalog?
+  executions      ProviderConversionRuleExecution[]
+  decisions       ProviderConversionDecisionAudit[]
+  comparisons     ProviderConversionShadowComparison[]
+  purchaseReviews PurchaseReview[]
+
+  @@unique([workspaceId, id])
+  @@unique([workspaceId, conversionRuleId])
+  @@index([workspaceId, connectionId, mode])
+  @@index([workspaceId, removedAt])
+  @@index([parserReleaseId])
+  @@index([createdByUserId])
+}
+
+model ProviderConversionRuleChannel {
+  id             String   @id @default(cuid())
+  workspaceId    String
+  providerRuleId String
+  channelId      String
+  createdAt      DateTime @default(now())
+
+  workspace    Workspace                    @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  providerRule ProviderConversionRuleConfig @relation(fields: [workspaceId, providerRuleId], references: [workspaceId, id], onDelete: Restrict, map: "ProviderConversionRuleChannel_providerRuleId_fkey")
+  channel      InboundWebhookChannel        @relation(fields: [workspaceId, channelId], references: [workspaceId, id], onDelete: Restrict, map: "ProviderConversionRuleChannel_channelId_fkey")
+
+  @@unique([providerRuleId, channelId])
+  @@index([workspaceId, channelId])
+}
+
+model ProviderConversionRuleEndpoint {
+  id                    String    @id @default(cuid())
+  workspaceId           String
+  providerRuleId        String
+  secretHash            String
+  secretVersion         Int       @default(1)
+  lastDeliveryAt        DateTime?
+  lastSuccessfulParseAt DateTime?
+  rotatedAt             DateTime?
+  removedAt             DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  workspace    Workspace                    @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  providerRule ProviderConversionRuleConfig @relation(fields: [workspaceId, providerRuleId], references: [workspaceId, id], onDelete: Restrict, map: "ProviderConversionRuleEndpoint_providerRuleId_fkey")
+  deliveries   InboundWebhookDelivery[]
+
+  @@unique([workspaceId, id])
+  @@unique([workspaceId, providerRuleId])
+  @@index([workspaceId, removedAt])
+}
+
+model ConversionCatalog {
+  id             String   @id @default(cuid())
+  workspaceId    String
+  providerRuleId String
+  name           String
+  productName    String
+  currency       String   @default("BRL")
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  workspace    Workspace                    @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  providerRule ProviderConversionRuleConfig @relation(fields: [workspaceId, providerRuleId], references: [workspaceId, id], onDelete: Restrict, map: "ConversionCatalog_providerRuleId_fkey")
+  attributes   ConversionCatalogAttribute[]
+  variants     ConversionCatalogVariant[]
+
+  @@unique([workspaceId, id])
+  @@unique([workspaceId, providerRuleId])
+  @@index([workspaceId, active])
+}
+
+model ConversionCatalogAttribute {
+  id          String   @id @default(cuid())
+  workspaceId String
+  catalogId   String
+  position    Int
+  key         String
+  label       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  catalog   ConversionCatalog @relation(fields: [workspaceId, catalogId], references: [workspaceId, id], onDelete: Restrict, map: "ConversionCatalogAttribute_catalogId_fkey")
+
+  @@unique([catalogId, position])
+  @@unique([catalogId, key])
+  @@index([workspaceId, catalogId])
+}
+
+model ConversionCatalogVariant {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  catalogId       String
+  normalizedKey   String
+  attributeValues Json
+  aliases         Json?
+  valueCents      Int
+  contentName     String?
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  workspace           Workspace                         @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  catalog             ConversionCatalog                 @relation(fields: [workspaceId, catalogId], references: [workspaceId, id], onDelete: Restrict, map: "ConversionCatalogVariant_catalogId_fkey")
+  executions          ProviderConversionRuleExecution[]
+  purchaseReviewItems PurchaseReviewItem[]
+
+  @@unique([workspaceId, id])
+  @@unique([catalogId, normalizedKey])
+  @@index([workspaceId, catalogId, active])
+}
+
+model ProviderConversionRuleExecution {
+  id                               String                            @id @default(cuid())
+  workspaceId                      String
+  providerRuleId                   String
+  sourceDeliveryId                 String
+  channelWorkspaceId               String?
+  channelId                        String?
+  matchedCatalogVariantWorkspaceId String?
+  matchedCatalogVariantId          String?
+  externalExecutionKey             String
+  occurredAt                       DateTime
+  contactIdentityHash              String?
+  status                           ProviderConversionExecutionStatus @default(observed)
+  reasonCode                       String?
+  normalizedResult                 Json?
+  valueCents                       Int?
+  currency                         String?
+  leadId                           String?
+  conversionEventLogId             String?
+  providerDecisionWorkspaceId      String?
+  providerDecisionId               String?
+  attemptCount                     Int                               @default(0)
+  lastAttemptedAt                  DateTime?
+  processedAt                      DateTime?
+  createdAt                        DateTime                          @default(now())
+  updatedAt                        DateTime                          @updatedAt
+
+  workspace             Workspace                        @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  providerRule          ProviderConversionRuleConfig     @relation(fields: [workspaceId, providerRuleId], references: [workspaceId, id], onDelete: Restrict, map: "ProviderConversionRuleExecution_providerRuleId_fkey")
+  sourceDelivery        InboundWebhookDelivery           @relation(fields: [workspaceId, sourceDeliveryId], references: [workspaceId, id], onDelete: Restrict, map: "ProviderConversionRuleExecution_sourceDeliveryId_fkey")
+  channel               InboundWebhookChannel?           @relation(fields: [channelWorkspaceId, channelId], references: [workspaceId, id], onDelete: SetNull, map: "ProviderConversionRuleExecution_channelId_fkey")
+  matchedCatalogVariant ConversionCatalogVariant?        @relation(fields: [matchedCatalogVariantWorkspaceId, matchedCatalogVariantId], references: [workspaceId, id], onDelete: SetNull, map: "ProviderConversionRuleExecution_catalogVariantId_fkey")
+  providerDecision      ProviderConversionDecisionAudit? @relation(fields: [providerDecisionWorkspaceId, providerDecisionId], references: [workspaceId, id], onDelete: SetNull, map: "ProviderConversionRuleExecution_providerDecisionId_fkey")
+  purchaseReview        PurchaseReview?
+
+  @@unique([workspaceId, id])
+  @@unique([providerRuleId, externalExecutionKey])
+  @@unique([providerDecisionWorkspaceId, providerDecisionId], map: "ProviderConversionRuleExecution_decision_key")
+  @@index([workspaceId, status, occurredAt])
+  @@index([workspaceId, contactIdentityHash, occurredAt])
+  @@index([sourceDeliveryId])
+  @@index([channelId])
+  @@index([matchedCatalogVariantId])
+  @@index([leadId])
+  @@index([conversionEventLogId])
+}
+
+model ProviderConversionDecisionAudit {
+  id                            String   @id @default(cuid())
+  workspaceId                   String
+  providerRuleId                String
+  sourceDeliveryId              String
+  channelWorkspaceId            String?
+  channelId                     String?
+  leadWorkspaceId               String?
+  leadId                        String?
+  supersedesDecisionWorkspaceId String?
+  supersedesDecisionId          String?
+  decisionCode                  String
+  reasonCode                    String
+  eventName                     String
+  occurredAt                    DateTime
+  occurrenceKey                 String
+  evaluationKey                 String
+  decisionFingerprint           String
+  decisionVersion               Int
+  engineVersion                 String
+  parserVersion                 String
+  contactIdentityHash           String?
+  businessDedupeMode            String?
+  businessDedupeScopeKey        String?
+  businessDedupeWindowSeconds   Int?
+  valueCents                    Int?
+  currency                      String?
+  normalizedOccurrence          Json
+  ruleSnapshot                  Json
+  catalogSnapshot               Json?
+  conversionSnapshot            Json
+  leadResolution                Json
+  decisionJson                  Json
+  createdAt                     DateTime @default(now())
+
+  workspace          Workspace                         @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  providerRule       ProviderConversionRuleConfig      @relation(fields: [workspaceId, providerRuleId], references: [workspaceId, id], onDelete: Restrict, map: "ProviderConversionDecisionAudit_providerRuleId_fkey")
+  sourceDelivery     InboundWebhookDelivery            @relation(fields: [workspaceId, sourceDeliveryId], references: [workspaceId, id], onDelete: Restrict, map: "ProviderConversionDecisionAudit_sourceDeliveryId_fkey")
+  channel            InboundWebhookChannel?            @relation(fields: [channelWorkspaceId, channelId], references: [workspaceId, id], onDelete: Restrict, map: "ProviderConversionDecisionAudit_channelId_fkey")
+  lead               Lead?                             @relation(fields: [leadWorkspaceId, leadId], references: [workspaceId, id], onDelete: Restrict, map: "ProviderConversionDecisionAudit_leadId_fkey")
+  supersedesDecision ProviderConversionDecisionAudit?  @relation("ProviderConversionDecisionVersions", fields: [supersedesDecisionWorkspaceId, supersedesDecisionId], references: [workspaceId, id], onDelete: Restrict, map: "ProviderConversionDecisionAudit_supersedesDecisionId_fkey")
+  supersededBy       ProviderConversionDecisionAudit[] @relation("ProviderConversionDecisionVersions")
+  providerExecution  ProviderConversionRuleExecution?
+  purchaseReview     PurchaseReview?
+
+  @@unique([workspaceId, id], map: "ProviderConversionDecisionAudit_workspace_id_key")
+  @@unique([providerRuleId, occurrenceKey, evaluationKey], map: "ProviderConversionDecisionAudit_evaluation_key")
+  @@unique([providerRuleId, occurrenceKey, decisionVersion], map: "ProviderConversionDecisionAudit_version_key")
+  @@unique([supersedesDecisionWorkspaceId, supersedesDecisionId], map: "ProviderConversionDecisionAudit_supersedes_key")
+  @@index([workspaceId, occurredAt], map: "ProviderConversionDecisionAudit_workspace_date_idx")
+  @@index([workspaceId, decisionCode, occurredAt], map: "ProviderConversionDecisionAudit_decision_date_idx")
+  @@index([sourceDeliveryId], map: "ProviderConversionDecisionAudit_delivery_idx")
+  @@index([channelId], map: "ProviderConversionDecisionAudit_channel_idx")
+  @@index([leadId], map: "ProviderConversionDecisionAudit_lead_idx")
+  @@index([businessDedupeScopeKey, occurredAt], map: "ProviderConversionDecisionAudit_dedupe_date_idx")
+  @@index([supersedesDecisionId], map: "ProviderConversionDecisionAudit_supersedes_idx")
+}
+
+model ProviderConversionShadowComparison {
+  id                     String                       @id @default(cuid())
+  workspaceId            String
+  providerRuleId         String
+  sourceDeliveryId       String
+  channelId              String
+  occurrenceKey          String
+  comparisonFingerprint  String
+  authoritativeEngine    ProviderConversionEngineMode
+  legacyEngineVersion    String?
+  legacyDecisionCode     String?
+  legacyReasonCode       String?
+  legacyDecision         Json?
+  canonicalEngineVersion String?
+  canonicalDecisionCode  String?
+  canonicalReasonCode    String?
+  canonicalDecision      Json?
+  matches                Boolean
+  mismatchCode           String?
+  createdAt              DateTime                     @default(now())
+
+  workspace      Workspace                    @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  providerRule   ProviderConversionRuleConfig @relation(fields: [workspaceId, providerRuleId], references: [workspaceId, id], onDelete: Restrict, map: "ProviderConversionShadowComparison_providerRuleId_fkey")
+  sourceDelivery InboundWebhookDelivery       @relation(fields: [workspaceId, sourceDeliveryId], references: [workspaceId, id], onDelete: Restrict, map: "ProviderConversionShadowComparison_sourceDeliveryId_fkey")
+  channel        InboundWebhookChannel        @relation(fields: [workspaceId, channelId], references: [workspaceId, id], onDelete: Restrict, map: "ProviderConversionShadowComparison_channelId_fkey")
+
+  @@unique([workspaceId, id], map: "ProviderConversionShadowComparison_workspace_id_key")
+  @@unique([providerRuleId, occurrenceKey, comparisonFingerprint], map: "ProviderConversionShadowComparison_occurrence_fingerprint_key")
+  @@index([workspaceId, matches, createdAt], map: "ProviderConversionShadowComparison_workspace_match_date_idx")
+  @@index([workspaceId, channelId, createdAt], map: "ProviderConversionShadowComparison_channel_date_idx")
+  @@index([workspaceId, mismatchCode, createdAt], map: "ProviderConversionShadowComparison_mismatch_date_idx")
+  @@index([sourceDeliveryId], map: "ProviderConversionShadowComparison_delivery_idx")
+}
+
+model FunnelStageConfiguration {
+  id                 String   @id @default(cuid())
+  workspaceId        String
+  eventName          String
+  label              String
+  position           Int
+  visible            Boolean  @default(true)
+  defaultValueCents  Int?
+  defaultCurrency    String?
+  defaultContentName String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, eventName])
+  @@index([workspaceId, position])
+}
+
+model Lead {
+  id                 String     @id @default(cuid())
+  workspaceId        String
+  whatsappInstanceId String?
+  name               String?
+  phoneDisplay       String?
+  phoneHash          String
+  status             LeadStatus @default(active)
+  source             String?
+  labels             String[]   @default([])
+  campaignId         String?
+  adSetId            String?
+  adId               String?
+  ctwaClid           String?
+  ctwaSourceUrl      String?
+  ctwaThumbnailUrl   String?
+  firstMessageAt     DateTime?
+  lastMessageAt      DateTime?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  workspace                   Workspace                         @relation(fields: [workspaceId], references: [id])
+  whatsappInstance            WhatsappInstance?                 @relation(fields: [whatsappInstanceId], references: [id])
+  purchaseReviews             PurchaseReview[]
+  providerConversionDecisions ProviderConversionDecisionAudit[]
+
+  @@unique([workspaceId, id])
+  @@unique([workspaceId, phoneHash])
+  @@index([workspaceId, status, lastMessageAt])
+  @@index([workspaceId, firstMessageAt])
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, campaignId])
+  @@index([workspaceId, adSetId])
+  @@index([workspaceId, adId])
+  @@index([workspaceId, ctwaClid])
+}
+
+model MetaIntegration {
+  id                             String    @id @default(cuid())
+  workspaceId                    String    @unique
+  status                         String    @default("connected")
+  encryptedAccessToken           String
+  tokenIv                        String
+  tokenTag                       String
+  tokenType                      String?
+  scopes                         String[]
+  expiresAt                      DateTime?
+  lastConnectedAt                DateTime?
+  selectedBusinessId             String?
+  selectedAdAccountId            String?
+  selectedPixelId                String?
+  capiAccessTokenEncrypted       String?
+  capiTokenIv                    String?
+  capiTokenTag                   String?
+  primaryConversionDestinationId String?
+  advancedRoutingEnabled         Boolean   @default(false)
+  createdAt                      DateTime  @default(now())
+  updatedAt                      DateTime  @updatedAt
+
+  workspace                    Workspace                  @relation(fields: [workspaceId], references: [id])
+  primaryConversionDestination MetaConversionDestination? @relation("MetaIntegrationPrimaryDestination", fields: [primaryConversionDestinationId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([selectedBusinessId])
+  @@index([selectedAdAccountId])
+  @@index([selectedPixelId])
+  @@index([primaryConversionDestinationId])
+  @@index([advancedRoutingEnabled])
+}
+
+model MetaCredential {
+  id                   String               @id @default(cuid())
+  workspaceId          String
+  source               MetaCredentialSource
+  label                String
+  encryptedAccessToken String
+  tokenIv              String
+  tokenTag             String
+  encryptionKeyVersion Int                  @default(1)
+  fingerprint          String
+  tokenLast4           String
+  tokenType            String?
+  scopes               String[]
+  expiresAt            DateTime?
+  status               MetaCredentialStatus @default(pending)
+  lastValidatedAt      DateTime?
+  validationError      String?
+  createdByUserId      String?
+  rotatedAt            DateTime?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  workspace           Workspace                @relation(fields: [workspaceId], references: [id])
+  createdBy           User?                    @relation("MetaCredentialCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  businessConnections MetaBusinessConnection[]
+
+  @@unique([workspaceId, fingerprint])
+  @@index([workspaceId, source, status])
+  @@index([workspaceId, createdAt])
+  @@index([createdByUserId])
+}
+
+model MetaBusinessConnection {
+  id                             String                       @id @default(cuid())
+  workspaceId                    String
+  credentialId                   String
+  businessManagerId              String
+  businessManagerName            String
+  status                         MetaBusinessConnectionStatus @default(pending)
+  defaultConversionDestinationId String?
+  lastValidatedAt                DateTime?
+  validationError                String?
+  lastSyncedAt                   DateTime?
+  createdByUserId                String?
+  createdAt                      DateTime                     @default(now())
+  updatedAt                      DateTime                     @updatedAt
+
+  workspace                    Workspace                    @relation(fields: [workspaceId], references: [id])
+  credential                   MetaCredential               @relation(fields: [credentialId], references: [id], onDelete: Restrict)
+  defaultConversionDestination MetaConversionDestination?   @relation("MetaBusinessDefaultDestination", fields: [defaultConversionDestinationId], references: [id], onDelete: SetNull)
+  createdBy                    User?                        @relation("MetaBusinessConnectionCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  reportingAccounts            MetaReportingAccount[]
+  conversionEventLogs          ConversionEventLog[]
+  inboundWebhookChannelRoutes  InboundWebhookChannelRoute[] @relation("InboundWebhookRouteBusinessConnection")
+  resolvedInboundWebhookEvents InboundWebhookEvent[]        @relation("InboundWebhookEventResolvedBusiness")
+
+  @@unique([workspaceId, id])
+  @@unique([workspaceId, businessManagerId])
+  @@index([workspaceId, status])
+  @@index([credentialId])
+  @@index([defaultConversionDestinationId])
+  @@index([createdByUserId])
+}
+
+model MetaAssetSnapshot {
+  id          String    @id @default(cuid())
+  workspaceId String
+  snapshotKey String
+  businessId  String?
+  status      String    @default("connected")
+  businesses  Json
+  adAccounts  Json
+  pixels      Json
+  pages       Json
+  syncError   String?
+  syncedAt    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@unique([workspaceId, snapshotKey])
+  @@index([workspaceId, businessId])
+}
+
+model MetaConversionDestination {
+  id                     String                          @id @default(cuid())
+  workspaceId            String
+  label                  String?
+  pixelId                String
+  pixelName              String
+  pageId                 String
+  pageName               String
+  ownerBusinessManagerId String?
+  status                 MetaConversionDestinationStatus @default(configured)
+  lastValidatedAt        DateTime?
+  validationError        String?
+  createdByUserId        String?
+  createdAt              DateTime                        @default(now())
+  updatedAt              DateTime                        @updatedAt
+
+  workspace                     Workspace                         @relation(fields: [workspaceId], references: [id])
+  createdBy                     User?                             @relation("MetaConversionDestinationCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  defaultForBusinessConnections MetaBusinessConnection[]          @relation("MetaBusinessDefaultDestination")
+  reportingAccountOverrides     MetaReportingAccount[]            @relation("MetaReportingDestinationOverride")
+  reportingAccountDestinations  MetaReportingAccountDestination[] @relation("MetaReportingAccountDestinationDestination")
+  adDestinationAssignments      MetaAdDestinationAssignment[]     @relation("MetaAdDestinationAssignmentDestination")
+  primaryForIntegrations        MetaIntegration[]                 @relation("MetaIntegrationPrimaryDestination")
+  conversionEventLogs           ConversionEventLog[]
+  inboundWebhookChannelRoutes   InboundWebhookChannelRoute[]      @relation("InboundWebhookRouteDestination")
+  resolvedInboundWebhookEvents  InboundWebhookEvent[]             @relation("InboundWebhookEventResolvedDestination")
+
+  @@unique([workspaceId, id])
+  @@unique([workspaceId, pixelId, pageId])
+  @@index([workspaceId, status])
+  @@index([pixelId])
+  @@index([pageId])
+  @@index([ownerBusinessManagerId])
+  @@index([createdByUserId])
+}
+
+model MetaReportingAccount {
+  id                      String              @id @default(cuid())
+  workspaceId             String
+  businessId              String
+  businessName            String
+  adAccountId             String
+  adAccountName           String
+  currency                String?
+  timezoneName            String?
+  businessConnectionId    String?
+  conversionDestinationId String?
+  active                  Boolean             @default(true)
+  syncStatus              MetaAssetSyncStatus @default(pending)
+  lastSyncedAt            DateTime?
+  lastSyncSince           String?
+  lastSyncUntil           String?
+  syncError               String?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+
+  workspace                    Workspace                         @relation(fields: [workspaceId], references: [id])
+  businessConnection           MetaBusinessConnection?           @relation(fields: [businessConnectionId], references: [id], onDelete: SetNull)
+  conversionDestination        MetaConversionDestination?        @relation("MetaReportingDestinationOverride", fields: [conversionDestinationId], references: [id], onDelete: SetNull)
+  allowedDestinations          MetaReportingAccountDestination[] @relation("MetaReportingAccountDestinationAccount")
+  adDestinationAssignments     MetaAdDestinationAssignment[]     @relation("MetaAdDestinationAssignmentAccount")
+  inboundWebhookChannelRoutes  InboundWebhookChannelRoute[]      @relation("InboundWebhookRouteReportingAccount")
+  resolvedInboundWebhookEvents InboundWebhookEvent[]             @relation("InboundWebhookEventResolvedReportingAccount")
+
+  @@unique([workspaceId, id])
+  @@unique([workspaceId, adAccountId])
+  @@index([workspaceId, active])
+  @@index([workspaceId, active, businessId, adAccountId])
+  @@index([workspaceId, businessConnectionId, active])
+  @@index([businessConnectionId])
+  @@index([conversionDestinationId])
+  @@index([businessId])
+}
+
+model MetaReportingAccountDestination {
+  id                      String   @id @default(cuid())
+  workspaceId             String
+  reportingAccountId      String
+  conversionDestinationId String
+  active                  Boolean  @default(true)
+  createdByUserId         String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  workspace   Workspace                 @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  account     MetaReportingAccount      @relation("MetaReportingAccountDestinationAccount", fields: [workspaceId, reportingAccountId], references: [workspaceId, id], onDelete: Restrict, map: "MetaReportingAccountDestination_accountId_fkey")
+  destination MetaConversionDestination @relation("MetaReportingAccountDestinationDestination", fields: [workspaceId, conversionDestinationId], references: [workspaceId, id], onDelete: Restrict, map: "MetaReportingAccountDestination_destinationId_fkey")
+  createdBy   User?                     @relation("MetaReportingAccountDestinationCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([workspaceId, reportingAccountId, conversionDestinationId], map: "MetaReportingAccountDestination_unique")
+  @@index([workspaceId, reportingAccountId, active])
+  @@index([workspaceId, conversionDestinationId, active])
+  @@index([createdByUserId])
+}
+
+model MetaAdDestinationAssignment {
+  id                      String                            @id @default(cuid())
+  workspaceId             String
+  adId                    String
+  reportingAccountId      String
+  conversionDestinationId String
+  source                  MetaAdDestinationAssignmentSource @default(automatic)
+  detectedPixelId         String?
+  detectedPageId          String?
+  createdByUserId         String?
+  createdAt               DateTime                          @default(now())
+  updatedAt               DateTime                          @updatedAt
+
+  workspace   Workspace                 @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  ad          MetaAd                    @relation("MetaAdDestinationAssignmentAd", fields: [workspaceId, adId], references: [workspaceId, adId], onDelete: Restrict, map: "MetaAdDestinationAssignment_adId_fkey")
+  account     MetaReportingAccount      @relation("MetaAdDestinationAssignmentAccount", fields: [workspaceId, reportingAccountId], references: [workspaceId, id], onDelete: Restrict, map: "MetaAdDestinationAssignment_accountId_fkey")
+  destination MetaConversionDestination @relation("MetaAdDestinationAssignmentDestination", fields: [workspaceId, conversionDestinationId], references: [workspaceId, id], onDelete: Restrict, map: "MetaAdDestinationAssignment_destinationId_fkey")
+  createdBy   User?                     @relation("MetaAdDestinationAssignmentCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([workspaceId, adId], map: "MetaAdDestinationAssignment_workspace_ad_key")
+  @@index([workspaceId, reportingAccountId])
+  @@index([workspaceId, conversionDestinationId])
+  @@index([source])
+  @@index([createdByUserId])
+}
+
+model InboundWebhookParserRelease {
+  id                String                            @id @default(cuid())
+  provider          InboundWebhookProvider
+  version           String
+  status            InboundWebhookParserReleaseStatus @default(observation_only)
+  certifiedByUserId String?
+  certifiedAt       DateTime?
+  createdAt         DateTime                          @default(now())
+  updatedAt         DateTime                          @updatedAt
+
+  certifiedBy             User?                          @relation("InboundWebhookParserReleaseCertifier", fields: [certifiedByUserId], references: [id], onDelete: SetNull)
+  connections             InboundWebhookConnection[]
+  providerConversionRules ProviderConversionRuleConfig[]
+
+  @@unique([provider, version], map: "InboundWebhookParserRelease_provider_version_key")
+  @@index([provider, status])
+  @@index([certifiedByUserId])
+}
+
+model InboundWebhookConnection {
+  id                    String                         @id @default(cuid())
+  workspaceId           String
+  provider              InboundWebhookProvider
+  displayName           String
+  parserReleaseId       String
+  secretHash            String?
+  status                InboundWebhookConnectionStatus @default(observation)
+  productionActivatedAt DateTime?
+  createdByUserId       String?
+  lastDeliveryAt        DateTime?
+  lastSuccessfulParseAt DateTime?
+  removedAt             DateTime?
+  createdAt             DateTime                       @default(now())
+  updatedAt             DateTime                       @updatedAt
+
+  workspace               Workspace                      @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  parserRelease           InboundWebhookParserRelease    @relation(fields: [parserReleaseId], references: [id], onDelete: Restrict)
+  createdBy               User?                          @relation("InboundWebhookConnectionCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  channels                InboundWebhookChannel[]
+  deliveries              InboundWebhookDelivery[]
+  events                  InboundWebhookEvent[]
+  replayBatches           InboundWebhookReplayBatch[]
+  providerConversionRules ProviderConversionRuleConfig[]
+
+  @@unique([workspaceId, id])
+  @@index([workspaceId, removedAt])
+  @@index([workspaceId, provider, status])
+  @@index([parserReleaseId])
+  @@index([createdByUserId])
+}
+
+model InboundWebhookChannel {
+  id                    String                       @id @default(cuid())
+  workspaceId           String
+  connectionId          String
+  organizationId        String
+  providerChannelId     String
+  connectedPhone        String
+  channelName           String?
+  status                InboundWebhookChannelStatus  @default(discovered)
+  conversionEngineMode  ProviderConversionEngineMode @default(canonical)
+  productionActivatedAt DateTime?
+  whatsappInstanceId    String?                      @unique
+  firstSeenAt           DateTime                     @default(now())
+  lastSeenAt            DateTime                     @default(now())
+  createdAt             DateTime                     @default(now())
+  updatedAt             DateTime                     @updatedAt
+
+  workspace                     Workspace                            @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  connection                    InboundWebhookConnection             @relation(fields: [workspaceId, connectionId], references: [workspaceId, id], onDelete: Restrict, map: "InboundWebhookChannel_connectionId_fkey")
+  whatsappInstance              WhatsappInstance?                    @relation(fields: [whatsappInstanceId], references: [id], onDelete: SetNull)
+  routes                        InboundWebhookChannelRoute[]
+  events                        InboundWebhookEvent[]
+  replayBatches                 InboundWebhookReplayBatch[]
+  providerConversionRuleScopes  ProviderConversionRuleChannel[]
+  providerConversionExecutions  ProviderConversionRuleExecution[]
+  providerConversionDecisions   ProviderConversionDecisionAudit[]
+  providerConversionComparisons ProviderConversionShadowComparison[]
+  purchaseReviews               PurchaseReview[]
+
+  @@unique([workspaceId, id])
+  @@unique([connectionId, organizationId, providerChannelId], map: "InboundWebhookChannel_identity_key")
+  @@index([workspaceId, connectionId, status])
+  @@index([workspaceId, connectedPhone])
+}
+
+model InboundWebhookChannelRoute {
+  id                                   String    @id @default(cuid())
+  workspaceId                          String
+  channelId                            String
+  routeKey                             String
+  metaBusinessConnectionWorkspaceId    String?
+  metaBusinessConnectionId             String?
+  metaReportingAccountWorkspaceId      String?
+  metaReportingAccountId               String?
+  metaConversionDestinationWorkspaceId String?
+  metaConversionDestinationId          String?
+  active                               Boolean   @default(true)
+  validationStatus                     String    @default("pending")
+  validationErrorCode                  String?
+  lastValidatedAt                      DateTime?
+  createdByUserId                      String?
+  createdAt                            DateTime  @default(now())
+  updatedAt                            DateTime  @updatedAt
+
+  workspace                 Workspace                  @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  channel                   InboundWebhookChannel      @relation(fields: [workspaceId, channelId], references: [workspaceId, id], onDelete: Restrict, map: "InboundWebhookChannelRoute_channelId_fkey")
+  metaBusinessConnection    MetaBusinessConnection?    @relation("InboundWebhookRouteBusinessConnection", fields: [metaBusinessConnectionWorkspaceId, metaBusinessConnectionId], references: [workspaceId, id], onDelete: SetNull, map: "InboundWebhookChannelRoute_metaBusinessConnectionId_fkey")
+  metaReportingAccount      MetaReportingAccount?      @relation("InboundWebhookRouteReportingAccount", fields: [metaReportingAccountWorkspaceId, metaReportingAccountId], references: [workspaceId, id], onDelete: SetNull, map: "InboundWebhookChannelRoute_metaReportingAccountId_fkey")
+  metaConversionDestination MetaConversionDestination? @relation("InboundWebhookRouteDestination", fields: [metaConversionDestinationWorkspaceId, metaConversionDestinationId], references: [workspaceId, id], onDelete: SetNull, map: "InboundWebhookChannelRoute_metaConversionDestinationId_fkey")
+  createdBy                 User?                      @relation("InboundWebhookChannelRouteCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([channelId, routeKey], map: "InboundWebhookChannelRoute_channel_route_key")
+  @@index([workspaceId, channelId, active])
+  @@index([workspaceId, metaBusinessConnectionId, active], map: "InboundWebhookChannelRoute_workspace_business_active_idx")
+  @@index([metaReportingAccountId])
+  @@index([metaConversionDestinationId])
+  @@index([createdByUserId])
+}
+
+model InboundWebhookDelivery {
+  id                              String                             @id @default(cuid())
+  workspaceId                     String
+  connectionId                    String
+  provider                        InboundWebhookProvider
+  ingressKey                      String
+  externalDeliveryId              String?
+  providerEventType               String?
+  parserVersion                   String
+  purpose                         InboundWebhookDeliveryPurpose      @default(message_observation)
+  providerRuleEndpointWorkspaceId String?
+  providerRuleEndpointId          String?
+  status                          InboundWebhookDeliveryStatus       @default(pending)
+  classification                  InboundWebhookEventClassification?
+  firstReceivedAt                 DateTime                           @default(now())
+  lastReceivedAt                  DateTime                           @default(now())
+  attemptCount                    Int                                @default(1)
+  providerAttempt                 Int?
+  encryptedPayload                String?
+  payloadIv                       String?
+  payloadTag                      String?
+  encryptionKeyVersion            Int?
+  payloadExpiresAt                DateTime
+  normalizedSummary               Json?
+  parseErrorCode                  String?
+  routingErrorCode                String?
+  queuedAt                        DateTime?
+  processedAt                     DateTime?
+  providerConversionsObservedAt   DateTime?
+  createdAt                       DateTime                           @default(now())
+  updatedAt                       DateTime                           @updatedAt
+
+  workspace                     Workspace                            @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  connection                    InboundWebhookConnection             @relation(fields: [workspaceId, connectionId], references: [workspaceId, id], onDelete: Restrict, map: "InboundWebhookDelivery_connectionId_fkey")
+  providerRuleEndpoint          ProviderConversionRuleEndpoint?      @relation(fields: [providerRuleEndpointWorkspaceId, providerRuleEndpointId], references: [workspaceId, id], onDelete: SetNull, map: "InboundWebhookDelivery_providerRuleEndpointId_fkey")
+  events                        InboundWebhookEvent[]
+  providerConversionExecutions  ProviderConversionRuleExecution[]
+  providerConversionDecisions   ProviderConversionDecisionAudit[]
+  providerConversionComparisons ProviderConversionShadowComparison[]
+  purchaseReviews               PurchaseReview[]
+
+  @@unique([workspaceId, id])
+  @@unique([connectionId, ingressKey], map: "InboundWebhookDelivery_connection_ingress_key")
+  @@index([workspaceId, status, createdAt])
+  @@index([workspaceId, payloadExpiresAt])
+  @@index([connectionId, lastReceivedAt])
+  @@index([workspaceId, purpose, createdAt])
+  @@index([providerRuleEndpointId])
+  @@index([payloadExpiresAt], map: "InboundWebhookDelivery_payloadExpiresAt_idx")
+  @@index([status, lastReceivedAt, queuedAt], map: "InboundWebhookDelivery_recovery_idx")
+  @@index([externalDeliveryId])
+}
+
+model PurchaseReview {
+  id                           String                   @id @default(cuid())
+  workspaceId                  String
+  providerRuleId               String
+  sourceDeliveryId             String
+  channelWorkspaceId           String?
+  channelId                    String?
+  providerExecutionWorkspaceId String?
+  providerExecutionId          String?                  @unique
+  providerDecisionWorkspaceId  String?
+  providerDecisionId           String?
+  externalOccurrenceKey        String
+  occurredAt                   DateTime
+  contactIdentityHash          String?
+  sourceType                   PurchaseReviewSourceType
+  messageAuthorType            String?
+  matchedTriggerPhrase         String?
+  status                       PurchaseReviewStatus
+  classificationCode           String
+  reasonCode                   String?
+  observedPaymentValueCents    Int?
+  calculatedValueCents         Int?
+  effectiveValueCents          Int?
+  currency                     String                   @default("BRL")
+  leadWorkspaceId              String?
+  leadId                       String?
+  conversionEventLogId         String?                  @unique
+  decisionReason               String?
+  decidedByUserId              String?
+  decidedAt                    DateTime?
+  version                      Int                      @default(1)
+  createdAt                    DateTime                 @default(now())
+  updatedAt                    DateTime                 @updatedAt
+
+  workspace          Workspace                        @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  providerRule       ProviderConversionRuleConfig     @relation(fields: [workspaceId, providerRuleId], references: [workspaceId, id], onDelete: Restrict, map: "PurchaseReview_providerRuleId_fkey")
+  sourceDelivery     InboundWebhookDelivery           @relation(fields: [workspaceId, sourceDeliveryId], references: [workspaceId, id], onDelete: Restrict, map: "PurchaseReview_sourceDeliveryId_fkey")
+  channel            InboundWebhookChannel?           @relation(fields: [channelWorkspaceId, channelId], references: [workspaceId, id], onDelete: SetNull, map: "PurchaseReview_channelId_fkey")
+  providerExecution  ProviderConversionRuleExecution? @relation(fields: [providerExecutionWorkspaceId, providerExecutionId], references: [workspaceId, id], onDelete: SetNull, map: "PurchaseReview_providerExecutionId_fkey")
+  providerDecision   ProviderConversionDecisionAudit? @relation(fields: [providerDecisionWorkspaceId, providerDecisionId], references: [workspaceId, id], onDelete: SetNull, map: "PurchaseReview_providerDecisionId_fkey")
+  lead               Lead?                            @relation(fields: [leadWorkspaceId, leadId], references: [workspaceId, id], onDelete: SetNull, map: "PurchaseReview_leadId_fkey")
+  conversionEventLog ConversionEventLog?              @relation(fields: [conversionEventLogId], references: [id], onDelete: SetNull)
+  decidedBy          User?                            @relation("PurchaseReviewDecisionActor", fields: [decidedByUserId], references: [id], onDelete: SetNull)
+  items              PurchaseReviewItem[]
+  adjustments        PurchaseValueAdjustment[]
+
+  @@unique([workspaceId, id])
+  @@unique([providerRuleId, externalOccurrenceKey])
+  @@unique([providerExecutionWorkspaceId, providerExecutionId])
+  @@unique([providerDecisionWorkspaceId, providerDecisionId], map: "PurchaseReview_decision_key")
+  @@index([workspaceId, status, occurredAt])
+  @@index([workspaceId, contactIdentityHash, occurredAt])
+  @@index([sourceDeliveryId])
+  @@index([channelId])
+  @@index([leadId])
+  @@index([conversionEventLogId])
+}
+
+model PurchaseReviewItem {
+  id                        String   @id @default(cuid())
+  workspaceId               String
+  purchaseReviewId          String
+  position                  Int
+  catalogVariantWorkspaceId String?
+  catalogVariantId          String?
+  attributeValues           Json
+  quantity                  Int
+  unitValueCents            Int?
+  subtotalValueCents        Int?
+  contentName               String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  workspace      Workspace                 @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  purchaseReview PurchaseReview            @relation(fields: [workspaceId, purchaseReviewId], references: [workspaceId, id], onDelete: Cascade, map: "PurchaseReviewItem_purchaseReviewId_fkey")
+  catalogVariant ConversionCatalogVariant? @relation(fields: [catalogVariantWorkspaceId, catalogVariantId], references: [workspaceId, id], onDelete: SetNull, map: "PurchaseReviewItem_catalogVariantId_fkey")
+
+  @@unique([purchaseReviewId, position])
+  @@index([workspaceId, purchaseReviewId])
+  @@index([catalogVariantId])
+}
+
+model PurchaseValueAdjustment {
+  id                   String   @id @default(cuid())
+  workspaceId          String
+  purchaseReviewId     String
+  conversionEventLogId String
+  previousValueCents   Int
+  effectiveValueCents  Int
+  actorUserId          String?
+  reason               String
+  createdAt            DateTime @default(now())
+
+  workspace          Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  purchaseReview     PurchaseReview     @relation(fields: [workspaceId, purchaseReviewId], references: [workspaceId, id], onDelete: Restrict, map: "PurchaseValueAdjustment_purchaseReviewId_fkey")
+  conversionEventLog ConversionEventLog @relation(fields: [conversionEventLogId], references: [id], onDelete: Restrict)
+  actor              User?              @relation("PurchaseValueAdjustmentActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, conversionEventLogId, createdAt])
+  @@index([purchaseReviewId, createdAt])
+  @@index([actorUserId])
+}
+
+model InboundWebhookEvent {
+  id                                       String                            @id @default(cuid())
+  workspaceId                              String
+  connectionId                             String
+  deliveryId                               String
+  channelId                                String
+  provider                                 InboundWebhookProvider
+  externalEventId                          String?
+  externalMessageId                        String?
+  dedupeKey                                String
+  occurredAt                               DateTime
+  contactIdentityHash                      String?
+  adId                                     String?
+  hasCtwa                                  Boolean                           @default(false)
+  classification                           InboundWebhookEventClassification
+  classificationReason                     String?
+  resolvedBusinessConnectionWorkspaceId    String?
+  resolvedBusinessConnectionId             String?
+  resolvedReportingAccountWorkspaceId      String?
+  resolvedReportingAccountId               String?
+  resolvedConversionDestinationWorkspaceId String?
+  resolvedConversionDestinationId          String?
+  normalizedSummary                        Json
+  createdAt                                DateTime                          @default(now())
+  updatedAt                                DateTime                          @updatedAt
+
+  workspace                     Workspace                     @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  connection                    InboundWebhookConnection      @relation(fields: [workspaceId, connectionId], references: [workspaceId, id], onDelete: Restrict, map: "InboundWebhookEvent_connectionId_fkey")
+  delivery                      InboundWebhookDelivery        @relation(fields: [workspaceId, deliveryId], references: [workspaceId, id], onDelete: Restrict, map: "InboundWebhookEvent_deliveryId_fkey")
+  channel                       InboundWebhookChannel         @relation(fields: [workspaceId, channelId], references: [workspaceId, id], onDelete: Restrict, map: "InboundWebhookEvent_channelId_fkey")
+  resolvedBusinessConnection    MetaBusinessConnection?       @relation("InboundWebhookEventResolvedBusiness", fields: [resolvedBusinessConnectionWorkspaceId, resolvedBusinessConnectionId], references: [workspaceId, id], onDelete: SetNull, map: "InboundWebhookEvent_resolvedBusinessConnectionId_fkey")
+  resolvedReportingAccount      MetaReportingAccount?         @relation("InboundWebhookEventResolvedReportingAccount", fields: [resolvedReportingAccountWorkspaceId, resolvedReportingAccountId], references: [workspaceId, id], onDelete: SetNull, map: "InboundWebhookEvent_resolvedReportingAccountId_fkey")
+  resolvedConversionDestination MetaConversionDestination?    @relation("InboundWebhookEventResolvedDestination", fields: [resolvedConversionDestinationWorkspaceId, resolvedConversionDestinationId], references: [workspaceId, id], onDelete: SetNull, map: "InboundWebhookEvent_resolvedConversionDestinationId_fkey")
+  replayItem                    InboundWebhookReplayItem?
+  productionItem                InboundWebhookProductionItem?
+
+  @@unique([workspaceId, id])
+  @@unique([connectionId, dedupeKey], map: "InboundWebhookEvent_connection_dedupe_key")
+  @@index([workspaceId, classification, occurredAt], map: "InboundWebhookEvent_workspace_classification_occurred_idx")
+  @@index([workspaceId, adId])
+  @@index([deliveryId])
+  @@index([channelId, occurredAt])
+  @@index([resolvedBusinessConnectionId])
+  @@index([resolvedReportingAccountId])
+  @@index([resolvedConversionDestinationId])
+}
+
+model InboundWebhookReplayBatch {
+  id                   String                        @id @default(cuid())
+  workspaceId          String
+  connectionId         String
+  channelId            String?
+  requestedByUserId    String
+  selection            InboundWebhookReplaySelection @default(canary_1)
+  requestedLimit       Int                           @default(1)
+  status               InboundWebhookReplayStatus    @default(queued)
+  totalItems           Int                           @default(0)
+  materializedCount    Int                           @default(0)
+  duplicateCount       Int                           @default(0)
+  skippedCount         Int                           @default(0)
+  failedCount          Int                           @default(0)
+  retryableFailedCount Int                           @default(0)
+  retryCount           Int                           @default(0)
+  startedAt            DateTime?
+  completedAt          DateTime?
+  lastRetriedAt        DateTime?
+  createdAt            DateTime                      @default(now())
+  updatedAt            DateTime                      @updatedAt
+
+  workspace   Workspace                  @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  connection  InboundWebhookConnection   @relation(fields: [workspaceId, connectionId], references: [workspaceId, id], onDelete: Restrict, map: "InboundWebhookReplayBatch_connectionId_fkey")
+  channel     InboundWebhookChannel?     @relation(fields: [workspaceId, channelId], references: [workspaceId, id], onDelete: Restrict, map: "InboundWebhookReplayBatch_channelId_fkey")
+  requestedBy User                       @relation("InboundWebhookReplayRequester", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+  items       InboundWebhookReplayItem[]
+
+  @@unique([workspaceId, id])
+  @@index([connectionId, createdAt])
+  @@index([workspaceId, channelId, createdAt])
+  @@index([workspaceId, status, createdAt])
+  @@index([requestedByUserId])
+}
+
+model InboundWebhookReplayItem {
+  id                   String                         @id @default(cuid())
+  workspaceId          String
+  batchId              String
+  eventId              String                         @unique
+  status               InboundWebhookReplayItemStatus @default(queued)
+  leadId               String?
+  conversionEventLogId String?
+  errorCode            String?
+  attemptCount         Int                            @default(0)
+  lastAttemptedAt      DateTime?
+  processedAt          DateTime?
+  createdAt            DateTime                       @default(now())
+  updatedAt            DateTime                       @updatedAt
+
+  workspace Workspace                 @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  batch     InboundWebhookReplayBatch @relation(fields: [workspaceId, batchId], references: [workspaceId, id], onDelete: Restrict, map: "InboundWebhookReplayItem_batchId_fkey")
+  event     InboundWebhookEvent       @relation(fields: [workspaceId, eventId], references: [workspaceId, id], onDelete: Restrict, map: "InboundWebhookReplayItem_eventId_fkey")
+
+  @@unique([workspaceId, eventId])
+  @@index([batchId, status])
+  @@index([workspaceId, status, createdAt])
+  @@index([leadId])
+  @@index([conversionEventLogId])
+}
+
+model InboundWebhookProductionItem {
+  id                   String                             @id @default(cuid())
+  workspaceId          String
+  eventId              String                             @unique
+  status               InboundWebhookProductionItemStatus @default(queued)
+  leadId               String?
+  conversionEventLogId String?
+  errorCode            String?
+  attemptCount         Int                                @default(0)
+  queuedAt             DateTime                           @default(now())
+  lastAttemptedAt      DateTime?
+  processedAt          DateTime?
+  createdAt            DateTime                           @default(now())
+  updatedAt            DateTime                           @updatedAt
+
+  workspace Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  event     InboundWebhookEvent @relation(fields: [workspaceId, eventId], references: [workspaceId, id], onDelete: Restrict, map: "InboundWebhookProductionItem_eventId_fkey")
+
+  @@unique([workspaceId, eventId])
+  @@index([workspaceId, status, createdAt])
+  @@index([status, lastAttemptedAt, queuedAt], map: "InboundWebhookProductionItem_recovery_idx")
+  @@index([leadId])
+  @@index([conversionEventLogId])
+}
+
+model MetaCampaign {
+  id                       String                      @id @default(cuid())
+  workspaceId              String
+  businessId               String?
+  adAccountId              String
+  campaignId               String
+  name                     String
+  status                   String?
+  effectiveStatus          String?
+  objective                String?
+  dailyBudgetCents         Int?
+  lifetimeBudgetCents      Int?
+  whatsappClassification   MetaWhatsappClassification  @default(not_whatsapp)
+  classificationSource     String?
+  classificationOverride   MetaWhatsappClassification?
+  spendCents               Int                         @default(0)
+  impressions              Int                         @default(0)
+  clicks                   Int                         @default(0)
+  metaConversationsStarted Int                         @default(0)
+  lastSyncedAt             DateTime?
+  createdAt                DateTime                    @default(now())
+  updatedAt                DateTime                    @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@unique([workspaceId, campaignId])
+  @@index([workspaceId, adAccountId])
+  @@index([workspaceId, status])
+  @@index([workspaceId, businessId, adAccountId, whatsappClassification])
+}
+
+model MetaCampaignDailyInsight {
+  id                       String   @id @default(cuid())
+  workspaceId              String
+  businessId               String
+  adAccountId              String
+  campaignId               String
+  localDate                String
+  spendCents               Int      @default(0)
+  impressions              Int      @default(0)
+  clicks                   Int      @default(0)
+  metaConversationsStarted Int      @default(0)
+  syncedAt                 DateTime @default(now())
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, campaignId, localDate])
+  @@index([workspaceId, localDate])
+  @@index([workspaceId, businessId, adAccountId, localDate])
+  @@index([workspaceId, campaignId, localDate])
+  @@index([workspaceId, localDate, impressions])
+}
+
+model MetaAdSet {
+  id                       String                      @id @default(cuid())
+  workspaceId              String
+  businessId               String?
+  adAccountId              String?
+  campaignId               String
+  adSetId                  String
+  name                     String
+  status                   String?
+  effectiveStatus          String?
+  destinationType          String?
+  dailyBudgetCents         Int?
+  lifetimeBudgetCents      Int?
+  whatsappClassification   MetaWhatsappClassification  @default(not_whatsapp)
+  classificationSource     String?
+  classificationOverride   MetaWhatsappClassification?
+  spendCents               Int                         @default(0)
+  impressions              Int                         @default(0)
+  clicks                   Int                         @default(0)
+  metaConversationsStarted Int                         @default(0)
+  lastSyncedAt             DateTime?
+  createdAt                DateTime                    @default(now())
+  updatedAt                DateTime                    @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@unique([workspaceId, adSetId])
+  @@index([workspaceId, campaignId])
+  @@index([workspaceId, businessId, adAccountId, whatsappClassification])
+  @@index([workspaceId, status])
+}
+
+model MetaAdSetDailyInsight {
+  id                       String   @id @default(cuid())
+  workspaceId              String
+  businessId               String
+  adAccountId              String
+  campaignId               String
+  adSetId                  String
+  localDate                String
+  spendCents               Int      @default(0)
+  impressions              Int      @default(0)
+  clicks                   Int      @default(0)
+  metaConversationsStarted Int      @default(0)
+  syncedAt                 DateTime @default(now())
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, adSetId, localDate])
+  @@index([workspaceId, localDate])
+  @@index([workspaceId, businessId, adAccountId, localDate])
+  @@index([workspaceId, campaignId, localDate])
+  @@index([workspaceId, adSetId, localDate])
+  @@index([workspaceId, localDate, impressions])
+}
+
+model MetaAd {
+  id                       String                      @id @default(cuid())
+  workspaceId              String
+  businessId               String?
+  adAccountId              String?
+  campaignId               String
+  adSetId                  String
+  adId                     String
+  name                     String
+  status                   String?
+  effectiveStatus          String?
+  destinationType          String?
+  creativeId               String?
+  thumbnailUrl             String?
+  previewUrl               String?
+  callToActionType         String?
+  detectedPixelIds         String[]                    @default([])
+  detectedPageIds          String[]                    @default([])
+  whatsappClassification   MetaWhatsappClassification  @default(not_whatsapp)
+  classificationSource     String?
+  classificationOverride   MetaWhatsappClassification?
+  spendCents               Int                         @default(0)
+  impressions              Int                         @default(0)
+  clicks                   Int                         @default(0)
+  metaConversationsStarted Int                         @default(0)
+  lastSyncedAt             DateTime?
+  createdAt                DateTime                    @default(now())
+  updatedAt                DateTime                    @updatedAt
+
+  workspace             Workspace                    @relation(fields: [workspaceId], references: [id])
+  destinationAssignment MetaAdDestinationAssignment? @relation("MetaAdDestinationAssignmentAd")
+
+  @@unique([workspaceId, adId])
+  @@index([workspaceId, campaignId])
+  @@index([workspaceId, adSetId])
+  @@index([workspaceId, businessId, adAccountId, whatsappClassification])
+  @@index([workspaceId, status])
+}
+
+model MetaAdDailyInsight {
+  id                       String   @id @default(cuid())
+  workspaceId              String
+  businessId               String
+  adAccountId              String
+  campaignId               String
+  adSetId                  String
+  adId                     String
+  localDate                String
+  spendCents               Int      @default(0)
+  impressions              Int      @default(0)
+  clicks                   Int      @default(0)
+  metaConversationsStarted Int      @default(0)
+  syncedAt                 DateTime @default(now())
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, adId, localDate])
+  @@index([workspaceId, localDate])
+  @@index([workspaceId, businessId, adAccountId, localDate])
+  @@index([workspaceId, campaignId, localDate])
+  @@index([workspaceId, adSetId, localDate])
+  @@index([workspaceId, adId, localDate])
+  @@index([workspaceId, localDate, impressions])
+}
+
+enum XmaxAccountStatus {
+  active
+  paused
+  disabled
+}
+
+enum XmaxShadowEventStatus {
+  observed
+  discarded
+  duplicate
+  failed
+}
+
+/// One row per XMAX tenant webhook (today: 1 for Dr. Hernia). Global ingress
+/// auth boundary — routing to XmaxAccount happens only after this passes.
+
+/// XMAX multi-account integration (shadow ingest first; no CAPI in X1).
+
+/// Semantic dedup: 1 event per contact+eventName forever (tag re-add must not re-fire).
+
+/// Shadow observation log for XMAX webhook processing (no Meta send in X1).
+
+enum LicenseInterval {
+  annual
+  monthly
+  semiannual
+}
+
+enum LicenseStatus {
+  active
+  refunded
+  chargeback
+  revoked
+}
+
+enum LicenseHeartbeatStatus {
+  ok
+  stale
+}
+
+/// RastrackDash license server (PalmUP). Raw key is never persisted after issue.
+/// Expiry is derived from expiresAt at validation time; it is not a stored status.
+
+/// Short-lived encrypted copy of the raw key (7d TTL) so admin resend can redeliver
+/// without ever storing the raw key in the License row itself.
+
+/// Telemetry of student instances. Unlimited fingerprints for the same bound account.
+
+/// Idempotent Guru (and future provider) webhook audit. Invalid signatures must not mutate License.
