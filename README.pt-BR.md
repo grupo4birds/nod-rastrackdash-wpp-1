@@ -18,6 +18,13 @@ O RastrackDash é um template self-hosted e multi-tenant para agências que oper
 
 Quando a licença fica bloqueada, o soft-lock mantém a leitura e bloqueia escritas. O rodapé residual `RastrackDash · powered by PalmUP` é fixo e não pode ser removido.
 
+## Comece com uma IA (recomendado)
+
+1. Abra o **Claude Code**, o **Codex** ou um agente equivalente em uma pasta de trabalho (não precisa clonar nada antes).
+2. Cole a URL do repositório (`https://github.com/samoskito/nod-rastrackdash-wpp`) e o [prompt oficial de onboarding com IA](docs/AI_ONBOARDING_PROMPT.pt-BR.md) exatamente como estão.
+
+A IA confere a pasta atual, clona o repositório se necessário, entra no diretório e lê os documentos sozinha — você não precisa clonar nem abrir nada manualmente antes. Em seguida ela pergunta o alvo do deploy (Docker local, VPS/Dokploy ou outro) e outras decisões antes de rodar qualquer comando, explica cada passo, valida antes de seguir e nunca pede para você colar senhas, tokens ou chaves no chat.
+
 ## Início rápido
 
 Pré-requisitos: Node.js 20+, pnpm, Docker e Docker Compose.
@@ -89,8 +96,9 @@ O servidor de licenças da PalmUP, Guru e a cobrança Asaas da PalmUP são servi
 
 ## Próximos documentos
 
+- [Prompt oficial de onboarding com IA](docs/AI_ONBOARDING_PROMPT.pt-BR.md)
 - [Guia da jornada do aluno](docs/GUIA-ALUNO.md)
-- [Guias de instalação](docs/setup/README.md)
+- [Guias de instalação](docs/setup/README.md) — [local (Docker)](docs/setup/local.md) · [VPS](docs/setup/vps.md) · [Dokploy](docs/setup/dokploy.md) · [variáveis de ambiente](docs/setup/environment.md) · [troubleshooting](docs/setup/troubleshooting.md)
 - [Matriz de aceite v1 em pt-BR](docs/release/ACCEPTANCE-v1.pt-BR.md) · [English](docs/release/ACCEPTANCE-v1.md)
 - [Changelog (EN)](CHANGELOG.md)
 - [Runbook operacional de licenças PalmUP](docs/ops/palmup-license-runbook.md)
