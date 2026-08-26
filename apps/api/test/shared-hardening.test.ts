@@ -16,25 +16,27 @@ import { assertCliUserIsNotPlatformAdmin } from "../src/scripts/create-user-guar
 
 describe("shared hardening", () => {
   it("uses one transaction-scoped lock for platformRole writes", async () => {
-    const queryRaw = vi.fn(async () => []);
+    const executeRaw = vi.fn(async () => 1);
 
-    await acquirePlatformRoleLock({ $queryRaw: queryRaw } as never);
+    await acquirePlatformRoleLock({ $executeRaw: executeRaw } as never);
 
-    expect(queryRaw).toHaveBeenCalledTimes(1);
+    expect(executeRaw).toHaveBeenCalledTimes(1);
     expect(platformRoleTransactionOptions.isolationLevel).toBe("Serializable");
   });
 
   it("takes platform-role before workspace lock and never bypasses PostgreSQL", async () => {
     const values: number[] = [];
-    const queryRaw = vi.fn(
+    const executeRaw = vi.fn(
       async (_strings: TemplateStringsArray, ...queryValues: unknown[]) => {
         values.push(...(queryValues as number[]));
       },
     );
 
-    await acquirePlatformWorkspaceWriteLocks({ $queryRaw: queryRaw } as never);
+    await acquirePlatformWorkspaceWriteLocks({
+      $executeRaw: executeRaw,
+    } as never);
 
-    expect(queryRaw).toHaveBeenCalledTimes(2);
+    expect(executeRaw).toHaveBeenCalledTimes(2);
     expect(values).toEqual([
       147_203_911, 619_470_281, 147_203_911, 731_884_217,
     ]);
