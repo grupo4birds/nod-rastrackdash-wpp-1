@@ -6,6 +6,7 @@ import { getApiPort } from "./config/env";
 import { loadLocalEnv } from "./config/load-env";
 import { PlatformAdminEnvBootstrapService } from "./auth/platform-admin-env-bootstrap.service";
 import { INBOUND_WEBHOOK_BODY_LIMIT } from "./inbound-webhooks/inbound-webhook-limits";
+import { LicenseAutoActivationService } from "./licensing-client/license-auto-activation.service";
 
 async function bootstrap() {
   loadLocalEnv();
@@ -20,6 +21,7 @@ async function bootstrap() {
     credentials: true,
   });
 
+  await app.get(LicenseAutoActivationService).activateOnBoot();
   await app.get(PlatformAdminEnvBootstrapService).bootstrap();
 
   await app.listen(getApiPort());

@@ -2,6 +2,7 @@ import { BullModule } from "@nestjs/bullmq";
 import { Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { PrismaModule } from "../common/prisma/prisma.module";
+import { LicenseAutoActivationService } from "./license-auto-activation.service";
 import { LicenseClientStatusController } from "./license-client-status.controller";
 import { LICENSE_HEARTBEAT_QUEUE } from "./license-client.constants";
 import { LicenseClientService } from "./license-client.service";
@@ -19,10 +20,11 @@ import { LicenseSoftlockGuard } from "./license-softlock.guard";
   controllers: [LicenseClientStatusController],
   providers: [
     LicenseClientService,
+    LicenseAutoActivationService,
     LicenseHeartbeatProcessor,
     LicenseHeartbeatScheduler,
     { provide: APP_GUARD, useClass: LicenseSoftlockGuard },
   ],
-  exports: [LicenseClientService],
+  exports: [LicenseAutoActivationService, LicenseClientService],
 })
 export class LicenseClientModule {}
