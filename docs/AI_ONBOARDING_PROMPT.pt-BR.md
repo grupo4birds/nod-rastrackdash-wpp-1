@@ -56,6 +56,11 @@ https://github.com/samoskito/nod-rastrackdash-wpp.
       dois, diga isso claramente em vez de fingir que existe suporte
       (docs/setup/whatsapp-providers.md).
    d) Se quero personalizar marca (whitelabel) desde já ou depois.
+   e) Se quero configurar SMTP agora, para o responsável de cada workspace
+      receber um e-mail automático de ativação, ou prefiro deixar para
+      depois e gerar/enviar o link de ativação manualmente a cada
+      workspace criado — SMTP é **opcional**, nunca um requisito para criar
+      workspace (docs/setup/environment.md#e-mail-smtp-byo).
    Não avance para comandos até eu responder essas perguntas.
 
 4. Nunca me peça para colar senha, token, chave de API, chave de licença
@@ -72,13 +77,19 @@ https://github.com/samoskito/nod-rastrackdash-wpp.
    (3) migrations/bootstrap; (4) `LICENSE_*`, ativação da licença
    (`POST /license-client/activate`) e validação de
    `/backoffice/license` — sem licença ativa a API bloqueia toda escrita
-   com `423`, então isso vem **antes** de criar qualquer workspace/cliente; (5) preencher `WPPTRACK_PLATFORM_ADMIN_EMAILS`
-   antes do primeiro login — **essa variável não cria a conta nem a
-   senha**, só concede o papel de plataforma a uma conta que já exista com
-   aquele e-mail; se a conta ainda não existir, explique como criá-la
-   (script `create-user` local, ou cadastro temporário com
-   `AUTH_PUBLIC_REGISTRATION_ENABLED=true` em produção — nunca invente um
-   terceiro caminho); (6) definir `META_CONNECTION_MODES=manual`
+   com `423`, então isso vem **antes** de criar qualquer workspace/cliente; (5) definir
+   `SETUP_PLATFORM_ADMIN_EMAIL` e `SETUP_PLATFORM_ADMIN_PASSWORD` no
+   ambiente do serviço da API (ex.: Dokploy) **antes** do próximo redeploy —
+   essas duas variáveis juntas são o caminho oficial e único para criar o
+   primeiro `platform_owner`: a conta é criada automaticamente no boot
+   seguinte da API, sem console/terminal no container e sem cadastro
+   público temporário. Depois do primeiro login bem-sucedido, remova
+   `SETUP_PLATFORM_ADMIN_PASSWORD` e faça redeploy de novo. Use
+   `SETUP_PLATFORM_ADMIN_CONFIRM_EXISTING=true` apenas para promover de
+   propósito uma conta que já exista com aquele e-mail. Nunca invente um
+   terceiro caminho — `WPPTRACK_PLATFORM_ADMIN_EMAILS` e cadastro público
+   com `AUTH_PUBLIC_REGISTRATION_ENABLED=true` **não concedem** papel de
+   plataforma no código atual; (6) definir `META_CONNECTION_MODES=manual`
    antes da Meta; (7) definir `AUTH_COOKIE_DOMAIN` se frontend/API forem
    subdomínios irmãos; (8) redeploy da API após qualquer mudança de env;
    (9) criar/entrar com o primeiro admin e validar `/backoffice/clients`;
@@ -97,18 +108,35 @@ https://github.com/samoskito/nod-rastrackdash-wpp.
    `NEXT_PUBLIC_API_URL=https://api.example.com`,
    `AUTH_COOKIE_DOMAIN=.example.com`,
    `META_CONNECTION_MODES=manual` e
-   `WPPTRACK_PLATFORM_ADMIN_EMAILS=student-admin@example.com`.
+   `SETUP_PLATFORM_ADMIN_EMAIL=student-admin@example.com` (a senha em
+   `SETUP_PLATFORM_ADMIN_PASSWORD` é secreta — nunca peça para colar no chat).
    Exemplo concreto: frontend `https://wpp.nodinfra.com.br`, API
    `https://aula.nodinfra.com.br` e
    `AUTH_COOKIE_DOMAIN=.nodinfra.com.br`. Para `AUTH_COOKIE_DOMAIN`, não
    use `https://`, barra final nem o hostname completo da API. Nunca use
-   `***` como valor. O e-mail de admin é específico do aluno: ele deve
-   digitá-lo no Dokploy/provedor, nunca commitar ou colar no chat.
+   `***` como valor. O e-mail e a senha do admin são específicos do aluno:
+   ele deve digitá-los no Dokploy/provedor, nunca commitar ou colar no chat.
 
    Meta é somente manual no MVP: documente e conduza App ID/token ou token
    permanente de usuário do sistema, permissões, BM, Pixel, Página,
    conta de anúncios, validação e seleção de destino. Não apresente login
    social Facebook/OAuth como alternativa.
+
+   SMTP (`EMAIL_PROVIDER=smtp`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`,
+   `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM_*`) é **opcional** e nunca
+   bloqueia a criação de workspace/cliente no passo (9)/(13) — não trate
+   como pré-requisito. Se o aluno responder "sim" na pergunta (e) do passo
+   3, ajude a preencher essas variáveis (host/porta/nome de exibição não
+   são segredo; usuário/senha do provedor SMTP são — peça para digitar
+   direto no `.env`/painel, nunca no chat) usando valores de exemplo sem
+   segredo real, como `SMTP_HOST=smtp.exemplo.com`, `SMTP_PORT=587`. Se
+   responder "não" (ou não configurar agora), diga explicitamente que o
+   workspace criado em `/backoffice/clients` continua funcionando sem
+   SMTP: a resposta da API vem com `deliveryStatus: manual_link_required`,
+   e o próximo passo é usar o botão de gerar link de ativação na própria
+   lista de workspaces e enviar esse link manualmente ao responsável
+   (WhatsApp, e-mail avulso etc.) — detalhe completo em
+   [`setup/environment.md`](setup/environment.md#e-mail-smtp-byo).
 
 6. Para cada passo:
    - explique em 1-3 frases o que vamos fazer e por quê;
@@ -136,6 +164,9 @@ https://github.com/samoskito/nod-rastrackdash-wpp.
    - `/backoffice/license` mostrando licença utilizável;
    - `/integrations` com Meta e ao menos um provedor de WhatsApp
      conectados;
+   - se SMTP não foi configurado, confirme que o(s) workspace(s) criado(s)
+     têm o link de ativação manual gerado e enviado ao responsável (isso
+     não é uma pendência de bloqueio, é o fluxo esperado sem SMTP);
    - lista dos passos que ficaram pendentes ou que eu decidi pular,
      e por quê.
 

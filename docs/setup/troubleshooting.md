@@ -46,10 +46,22 @@ Cada entrada segue: **sintoma → diagnóstico seguro → causa provável → co
 
 ## Login abre `/overview` em vez de `/backoffice/clients`
 
-- **Diagnóstico:** confirme no ambiente da API se `WPPTRACK_PLATFORM_ADMIN_EMAILS` contém o e-mail do usuário que entrou; confira se a API foi redeployada e se a sessão foi criada antes da variável existir.
-- **Causa provável:** a env do administrador de plataforma está ausente, tem outro e-mail, não chegou ao container, ou a sessão é antiga. Lembre-se: `WPPTRACK_PLATFORM_ADMIN_EMAILS` só concede o papel a uma conta que **já existe** — se a conta nunca foi criada com esse e-mail, o login falha antes de chegar a essa checagem (veja [`environment.md`](environment.md#banco-de-dados--autenticação) para os caminhos confirmados de criar a conta).
-- **Correção:** informe o e-mail específico do aluno diretamente no Dokploy/provedor (não em Git ou chat), redeploy a API, saia e entre novamente. Não use `***` como valor.
+- **Diagnóstico:** o acesso a `/backoffice/clients` depende só do campo `platformRole` gravado no banco para aquele usuário — não existe mais nenhuma allowlist de e-mail avaliada no momento do login. Confira nos logs da API, logo após o boot/redeploy, um dos eventos `platform_admin_env_bootstrap_completed`, `_skipped_existing_owner`, `_existing_user_requires_confirmation` ou `_failed` (veja [`environment.md`](environment.md#bootstrap-do-primeiro-administrador-por-env--caminho-oficial)).
+- **Causa provável:**
+  - `SETUP_PLATFORM_ADMIN_EMAIL`/`SETUP_PLATFORM_ADMIN_PASSWORD` nunca foram definidas (ou só uma das duas) antes de um redeploy — o bootstrap nunca rodou;
+  - você logou com um e-mail diferente do usado em `SETUP_PLATFORM_ADMIN_EMAIL`;
+  - já existe um `platform_owner` com **outro** e-mail nessa instância — nesse caso o bootstrap com essas variáveis não faz nada (é fechado depois do primeiro dono), gerencie papéis pela sessão autenticada em vez de reusar a env;
+  - o e-mail já pertencia a uma conta comum e `SETUP_PLATFORM_ADMIN_CONFIRM_EXISTING` não estava `true` no boot em que você esperava a promoção;
+  - `WPPTRACK_PLATFORM_ADMIN_EMAILS` está preenchida — essa variável é legada e não tem nenhum efeito no código atual, preenchê-la não resolve isso.
+- **Correção:** defina `SETUP_PLATFORM_ADMIN_EMAIL` e `SETUP_PLATFORM_ADMIN_PASSWORD` diretamente no Dokploy/provedor (não em Git ou chat), redeploy a API, e logue com esse e-mail/senha exatos. Se o objetivo é promover uma conta que já existe, defina também `SETUP_PLATFORM_ADMIN_CONFIRM_EXISTING=true` antes do redeploy. Não use `***` como valor.
 - **Verificação:** o primeiro administrador abre `/backoffice/clients`.
+
+## Workspace criado sem e-mail de ativação (SMTP não configurado)
+
+- **Diagnóstico:** a resposta de `POST /backoffice/workspaces` (ou a mensagem exibida em `/backoffice/clients` após criar o workspace) traz `deliveryStatus: "manual_link_required"`.
+- **Causa provável:** SMTP é **opcional** neste template — sem `EMAIL_PROVIDER=smtp`/`SMTP_*` preenchidos (veja [`environment.md`](environment.md#e-mail-smtp-byo)), a API não tem como enviar o e-mail de ativação, mas o workspace é criado normalmente mesmo assim; isso não é um erro.
+- **Correção:** nenhuma correção é necessária para continuar — use o botão de gerar link de ativação na lista de workspaces em `/backoffice/clients` e envie esse link manualmente ao responsável (WhatsApp, e-mail avulso etc.). Se preferir enviar e-mails automáticos depois, preencha SMTP e novos workspaces passam a usar `deliveryStatus: "queued"`; workspaces já criados continuam exigindo link manual até o responsável ativar a conta.
+- **Verificação:** o responsável consegue acessar o link de ativação gerado e concluir o próprio cadastro.
 
 ## Webhook Uazapi "não autorizado" (401)
 

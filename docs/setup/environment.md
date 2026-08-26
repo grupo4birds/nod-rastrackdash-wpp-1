@@ -67,31 +67,70 @@ Convenção de colunas:
 | `AUTH_GOOGLE_ENABLED` | Não | Decisão sua (login com Google) | `.env` da API | Não |
 | `AUTH_COOKIE_DOMAIN` | Sim quando web e API usam subdomínios irmãos | Domínio raiz comum, com ponto inicial | `.env` da API / env do serviço | Não |
 | `AUTH_EXPOSE_DEV_TOKENS` | Não — **deixe `false` em produção** | Só para debug local | `.env` local | Não |
-| `WPPTRACK_PLATFORM_ADMIN_EMAILS` | Sim antes do primeiro login administrativo | E-mail do administrador da sua instância | `.env` da API / env do serviço | Não — mas é específico do aluno e nunca deve ser commitado ou colado em chat |
-| `SETUP_PLATFORM_ADMIN_EMAIL` | Não | E-mail do primeiro `platform_owner` | Env do serviço da API (ex.: Dokploy) | Não |
-| `SETUP_PLATFORM_ADMIN_PASSWORD` | Não | Senha forte do primeiro `platform_owner` | Env do serviço da API (ex.: Dokploy) | **Sim** |
-| `SETUP_PLATFORM_ADMIN_CONFIRM_EXISTING` | Não | Use exatamente `true` somente para promover uma conta existente de propósito | Env do serviço da API | Não |
+| `WPPTRACK_PLATFORM_ADMIN_EMAILS` | Não use — **variável legada, sem efeito no código atual** | — | — | Não |
+| `SETUP_PLATFORM_ADMIN_EMAIL` | Sim, junto com a senha, para o bootstrap do primeiro `platform_owner` | E-mail do primeiro `platform_owner` | Env do serviço da API (ex.: Dokploy) — nunca commitado nem colado em chat | Não — mas é específico do aluno |
+| `SETUP_PLATFORM_ADMIN_PASSWORD` | Sim, junto com o e-mail, para o bootstrap do primeiro `platform_owner` | Senha forte que você mesmo escolhe (8+ caracteres) | Env do serviço da API (ex.: Dokploy) | **Sim** — remova essa variável (ou limpe o valor) depois do primeiro login bem-sucedido |
+| `SETUP_PLATFORM_ADMIN_CONFIRM_EXISTING` | Não (padrão `false`) | Use exatamente `true` somente para promover intencionalmente uma conta já existente com aquele e-mail | Env do serviço da API | Não |
 
-### Bootstrap do primeiro administrador por env
+### Bootstrap do primeiro administrador por env — caminho oficial
 
-No Dokploy, defina `SETUP_PLATFORM_ADMIN_EMAIL` e
-`SETUP_PLATFORM_ADMIN_PASSWORD` no provedor e reinicie a API. O administrador
-é criado no boot; se o e-mail já pertencer a uma conta, ela só será promovida
-quando `SETUP_PLATFORM_ADMIN_CONFIRM_EXISTING=true`. Depois do primeiro acesso,
-remova ou limpe a variável de senha se desejar.
+`SETUP_PLATFORM_ADMIN_EMAIL` + `SETUP_PLATFORM_ADMIN_PASSWORD` são o caminho
+oficial e único para criar o primeiro `platform_owner`, tanto no Dokploy/produção
+quanto localmente — não dependem de console/terminal no container, de
+cadastro público temporário nem de nenhuma allowlist de e-mail.
 
-⚠️ **`WPPTRACK_PLATFORM_ADMIN_EMAILS` não cria a conta nem a senha do
-administrador.** É só uma allowlist: no login, se o e-mail do usuário
-autenticado (que precisa **já existir** como conta) bater com um dos
-e-mails dessa lista, aquele usuário recebe o papel `platform_owner`
-(confirmado em `auth.service.ts` — a checagem roda contra um usuário já
-carregado, ela nunca cria linha nova). Você ainda precisa criar a própria
-conta (e-mail + senha) por um destes dois caminhos, honestamente
-documentados aqui porque o bootstrap em produção **não é uma etapa única
-e óbvia** no template atual:
+Como funciona (implementado em `PlatformAdminEnvBootstrapService`, executado
+a cada boot da API, antes dela aceitar conexões):
 
-- **Local:** `pnpm --filter @wpptrack/api create-user -- --email ... --password ... --role owner` (veja [`local.md`](local.md#5-primeiro-administrador)) — confirmado funcionando localmente.
-- **Dokploy/produção:** este script depende de acesso a um console/terminal dentro do container da API — confirme no seu painel se o serviço oferece essa opção (o rótulo varia por versão do Dokploy; não presuma que existe sem checar a tela). Se não oferecer, a alternativa é habilitar temporariamente `AUTH_PUBLIC_REGISTRATION_ENABLED=true`, redeploy, cadastrar-se pela tela de login do web com o e-mail que está em `WPPTRACK_PLATFORM_ADMIN_EMAILS`, e então voltar a variável para `false` (ou remover — o padrão em produção já é desabilitado) e redeploy de novo. Ambos os caminhos precisam da API já redeployada com `WPPTRACK_PLATFORM_ADMIN_EMAILS` preenchida **antes** do primeiro login desse e-mail, senão o usuário é criado sem o papel de plataforma.
+- **Defina as duas variáveis juntas** no serviço da API (painel de env do
+  Dokploy) e faça **redeploy** (local: basta reiniciar
+  `pnpm --filter @wpptrack/api dev`). Se só uma das duas estiver preenchida,
+  o bootstrap não faz nada — a API sobe normalmente, sem criar/alterar
+  contas.
+- **É idempotente e só existe um `platform_owner` por instância:** se a
+  conta daquele e-mail já for `platform_owner`, o boot seguinte não faz
+  nada (log `platform_admin_env_bootstrap_skipped_existing_owner`). Se já
+  existir um `platform_owner` **com outro e-mail**, o bootstrap também não
+  faz nada com essas variáveis — nesse ponto, gerencie papéis pela sessão
+  autenticada (backoffice), não reutilize essas variáveis para trocar quem
+  é o dono da plataforma.
+- Se o e-mail já pertencer a uma conta comum (sem papel de plataforma), ela
+  só é promovida a `platform_owner` quando `SETUP_PLATFORM_ADMIN_CONFIRM_EXISTING=true`
+  também estiver definida — sem isso, o bootstrap é pulado de propósito
+  (log `platform_admin_env_bootstrap_existing_user_requires_confirmation`),
+  para não promover uma conta por engano.
+- A senha informada só é gravada quando a conta é **criada** ou quando a
+  conta promovida ainda **não tinha senha** — uma senha já existente nunca é
+  sobrescrita.
+- O bootstrap cria/promove só a conta e o papel `platform_owner`; **não cria
+  workspace nenhum**. Depois de logar com essa conta, crie o primeiro
+  workspace/cliente em `/backoffice/clients`.
+- Depois de confirmar o primeiro login, **remova `SETUP_PLATFORM_ADMIN_PASSWORD`**
+  do painel (ou limpe o valor) e faça redeploy — sem a senha preenchida, o
+  bootstrap para de rodar completamente a cada boot (ele nem chega a
+  consultar o banco), então é seguro removê-la. Manter só
+  `SETUP_PLATFORM_ADMIN_EMAIL` preenchida depois disso não tem efeito
+  nenhum, mas não há motivo para deixar a senha em texto plano no painel
+  depois de usá-la.
+
+⚠️ **`WPPTRACK_PLATFORM_ADMIN_EMAILS` não tem efeito no código atual** — o
+mecanismo de allowlist por e-mail no login foi removido; preencher essa
+variável não concede papel nenhum. Não a use como caminho para dar acesso de
+plataforma.
+
+⚠️ **Habilitar `AUTH_PUBLIC_REGISTRATION_ENABLED=true` temporariamente para se
+cadastrar como administrador de plataforma também não funciona mais** — o
+cadastro público cria uma conta comum, sem nenhum papel de plataforma; essa
+variável continua existindo só como toggle de cadastro público de usuários
+comuns, sem relação com o bootstrap do `platform_owner`.
+
+Para criar contas **de workspace** (não de plataforma) — por exemplo, um
+usuário/cliente comum com seu próprio workspace — use
+`pnpm --filter @wpptrack/api create-user -- --email ... --password ... --role owner`
+(veja [`local.md`](local.md#5-primeiro-administrador)). Esse script
+explicitamente se recusa a criar ou alterar qualquer conta que já tenha um
+papel de plataforma — ele não é (e não deve ser usado como) caminho para o
+primeiro `platform_owner`.
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `GOOGLE_OAUTH_STATE_SECRET` | Só se `AUTH_GOOGLE_ENABLED=true` | Console do Google Cloud (OAuth) | `.env` da API / env do serviço | `GOOGLE_CLIENT_SECRET` e `GOOGLE_OAUTH_STATE_SECRET` **sim**; `GOOGLE_CLIENT_ID`/`GOOGLE_REDIRECT_URI` não |
 
 ## Licença (PalmUP)
@@ -120,6 +159,19 @@ template, não de uso do produto.
 | `SMTP_USER`, `SMTP_PASSWORD` | Só se for enviar e-mail | Seu provedor SMTP | `.env` local / env do serviço | **Sim** |
 | `EMAIL_FROM_NAME`, `EMAIL_FROM_ADDRESS`, `EMAIL_REPLY_TO` | Recomendado | Sua escolha | `.env` da API | Não |
 
+SMTP é **totalmente opcional** — não é pré-requisito para criar workspace/cliente. Sem `EMAIL_PROVIDER=smtp` (ou com qualquer uma das variáveis acima ausente), a API continua criando o workspace normalmente em `POST /backoffice/workspaces`; ela só não consegue enfileirar o e-mail de ativação do responsável e a resposta traz `deliveryStatus: "manual_link_required"`. Nesse caso, gere o link de ativação manual no botão correspondente em `/backoffice/clients` e envie você mesmo (WhatsApp, e-mail avulso etc.) para o responsável do workspace — o link tem expiração própria, então gere um novo se o anterior expirar. Exemplo de valores para testar localmente, sem segredo real (não são credenciais de um provedor de verdade):
+
+```bash
+EMAIL_PROVIDER=smtp
+SMTP_HOST=smtp.exemplo.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=usuario@exemplo.com
+SMTP_PASSWORD=preencha-com-a-senha-real-do-seu-provedor
+EMAIL_FROM_NAME=RastrackDash
+EMAIL_FROM_ADDRESS=no-reply@exemplo.com
+```
+
 ## Meta Ads
 
 | Variável | Obrigatória | Onde obter | Onde inserir | Secreto |
@@ -144,7 +196,7 @@ WEB_ORIGIN=https://app.example.com
 NEXT_PUBLIC_API_URL=https://api.example.com
 AUTH_COOKIE_DOMAIN=.example.com
 META_CONNECTION_MODES=manual
-WPPTRACK_PLATFORM_ADMIN_EMAILS=student-admin@example.com
+SETUP_PLATFORM_ADMIN_EMAIL=student-admin@example.com
 ```
 
 Quando frontend e API forem subdomínios irmãos, `AUTH_COOKIE_DOMAIN` deve ser somente o domínio raiz comum, com ponto inicial. Exemplo concreto:
@@ -155,7 +207,7 @@ API: https://aula.nodinfra.com.br
 AUTH_COOKIE_DOMAIN=.nodinfra.com.br
 ```
 
-Não use `https://`, barra final nem o hostname completo da API em `AUTH_COOKIE_DOMAIN`. Nunca use `***` como valor: ele serve apenas para redigir algo em logs. Insira o e-mail real do administrador em `WPPTRACK_PLATFORM_ADMIN_EMAILS` diretamente no Dokploy/provedor, antes do primeiro login; ele é específico da sua instância e não deve ser commitado nem enviado em chat. Toda alteração de env da API exige redeploy da API; `NEXT_PUBLIC_API_URL` também exige novo build/deploy do web.
+Não use `https://`, barra final nem o hostname completo da API em `AUTH_COOKIE_DOMAIN`. Nunca use `***` como valor: ele serve apenas para redigir algo em logs. Insira `SETUP_PLATFORM_ADMIN_EMAIL` e `SETUP_PLATFORM_ADMIN_PASSWORD` diretamente no Dokploy/provedor antes do redeploy que vai criar o primeiro administrador (veja a seção acima) — o e-mail é específico da sua instância e nem ele nem a senha devem ser commitados ou enviados em chat. Toda alteração de env da API exige redeploy da API; `NEXT_PUBLIC_API_URL` também exige novo build/deploy do web.
 
 ## Provedores de WhatsApp
 
@@ -231,7 +283,10 @@ API_PORT=3000
 API_PUBLIC_URL=https://[SUA-API].seudominio.com
 WEB_ORIGIN=https://[SEU-WEB].seudominio.com
 AUTH_COOKIE_DOMAIN=.seudominio.com
-WPPTRACK_PLATFORM_ADMIN_EMAILS=[E-MAIL DO ADMIN, PREENCHER DIRETO NO DOKPLOY]
+
+# ---- Primeiro platform_owner (preencher os dois, redeploy, logar, depois remover a senha) ----
+SETUP_PLATFORM_ADMIN_EMAIL=[E-MAIL DO ADMIN, PREENCHER DIRETO NO DOKPLOY]
+SETUP_PLATFORM_ADMIN_PASSWORD=[PREENCHER NO DOKPLOY — remover depois do primeiro login]
 
 # ---- Banco de dados / Redis (montar a partir da tela de conexão do Dokploy) ----
 DATABASE_URL=postgresql://[USUARIO]:[SENHA_URL_ENCODED]@[HOST_INTERNO]:5432/[BANCO]

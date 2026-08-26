@@ -47,17 +47,29 @@ As migrations do Prisma rodam automaticamente pelo `pnpm setup` (local) ou pelo 
 
 **Verificação de saúde**, nos dois caminhos: `GET /health` e `GET /health/ready` devem responder OK antes de seguir.
 
-## 6. Primeiro administrador
+## 6. Primeiro administrador de plataforma
 
-Crie o primeiro usuário com papel `owner`:
+O caminho oficial e único para criar o primeiro `platform_owner` (acesso a `/backoffice/clients`) é o bootstrap por variáveis de ambiente da API — não existe script de terminal, allowlist de e-mail ou cadastro público que conceda esse papel.
+
+1. Defina **`SETUP_PLATFORM_ADMIN_EMAIL`** e **`SETUP_PLATFORM_ADMIN_PASSWORD`** juntas no ambiente da API — no `.env` local ou no painel de variáveis de ambiente do serviço da API no Dokploy (nunca commitadas, nunca coladas em chat).
+2. Faça (re)deploy da API — local: reinicie `pnpm --filter @wpptrack/api dev`; Dokploy: redeploy do serviço. O bootstrap roda automaticamente no boot seguinte, antes da API aceitar conexões, e cria a conta `platform_owner` **sem workspace nenhum**.
+3. Logue no web com esse e-mail/senha e confirme que abre `/backoffice/clients`. Se cair em `/overview`, o bootstrap não rodou como esperado — veja [`setup/troubleshooting.md`](setup/troubleshooting.md#login-abre-overview-em-vez-de-backofficeclients) antes de tentar de novo.
+4. Crie o primeiro workspace/cliente em `/backoffice/clients` (detalhado no passo 8) — o bootstrap cria só a conta de plataforma, nunca um workspace.
+5. Depois de confirmar o primeiro login, **remova `SETUP_PLATFORM_ADMIN_PASSWORD`** do ambiente (ou limpe o valor) e faça um novo (re)deploy/restart da API — sem a senha preenchida, o bootstrap simplesmente para de rodar a cada boot; é seguro remover e evita deixar uma senha em texto plano no painel.
+
+Detalhe completo do mecanismo (idempotência, promoção de conta já existente com `SETUP_PLATFORM_ADMIN_CONFIRM_EXISTING=true`) em [`setup/environment.md`](setup/environment.md#bootstrap-do-primeiro-administrador-por-env--caminho-oficial); passo a passo em Dokploy no passo 13 de [`setup/dokploy.md`](setup/dokploy.md).
+
+⚠️ `WPPTRACK_PLATFORM_ADMIN_EMAILS` e `AUTH_PUBLIC_REGISTRATION_ENABLED=true` **não concedem** papel de plataforma no código atual — não são caminhos alternativos para o primeiro administrador, mesmo que pareçam funcionar para outra coisa.
+
+### Conta de workspace (opcional, ambiente local)
+
+Isso é diferente de conta de plataforma: se você quiser testar, no seu ambiente local, uma conta comum de cliente/workspace (sem acesso a `/backoffice/clients`), use:
 
 ```bash
 pnpm --filter @wpptrack/api create-user -- --email voce@suaagencia.com --password 'uma-senha-forte' --role owner
 ```
 
-(`pnpm setup` também oferece este passo automaticamente se `SETUP_ADMIN_EMAIL`/`SETUP_ADMIN_PASSWORD` estiverem definidas antes de rodá-lo.)
-
-⚠️ `WPPTRACK_PLATFORM_ADMIN_EMAILS` (passo 3) **não cria essa conta nem a senha** — ela só concede o papel de administrador de plataforma a uma conta que já exista com aquele e-mail, no momento do login. Em Dokploy/produção, sem `pnpm` local, veja as duas formas honestas de criar a conta em [`setup/environment.md`](setup/environment.md#banco-de-dados--autenticação) e no passo 13.2 de [`setup/dokploy.md`](setup/dokploy.md).
+Esse comando cria a conta **e** um workspace, com você como `owner` dele (`pnpm setup` também oferece esse passo automaticamente se `SETUP_ADMIN_EMAIL`/`SETUP_ADMIN_PASSWORD`, sem "PLATFORM" no nome, estiverem definidas antes de rodá-lo). Ele se recusa a criar/alterar qualquer conta que já tenha papel de plataforma — não é um caminho para o primeiro `platform_owner` acima (veja [`setup/local.md`](setup/local.md#5-primeiro-administrador)).
 
 ## 7. Ativar a licença
 
@@ -71,6 +83,8 @@ Sem licença ativa a instância fica **bloqueada para escrita** (`423`): você c
 ## 8. Primeiro workspace (cliente)
 
 Logue com o administrador criado, crie seu primeiro workspace para um cliente final e confirme o checklist em `/backoffice` (banco conectado, licença utilizável, Meta conectado, ao menos um workspace — também disponível via `GET /onboarding/status`).
+
+**SMTP é opcional aqui.** Ao criar o workspace em `/backoffice/clients`, decida se você quer configurar SMTP agora (para o responsável receber um e-mail automático de ativação) ou deixar para depois — o workspace é criado da mesma forma nos dois casos. Sem `EMAIL_PROVIDER=smtp`/`SMTP_*` preenchidos (veja [`setup/environment.md`](setup/environment.md#e-mail-smtp-byo)), ou se o envio falhar, a tela mostra que é preciso gerar o link manual: use o botão de gerar link de ativação na lista de workspaces e envie você mesmo (WhatsApp, e-mail avulso etc.) para o responsável. Nenhum segredo real é necessário só para testar o fluxo — sem SMTP configurado, o link manual sempre funciona.
 
 ## 9. Conectar Meta Ads
 

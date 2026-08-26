@@ -72,15 +72,41 @@ pnpm --filter @wpptrack/api exec prisma migrate deploy --schema apps/api/prisma/
 
 ## 5. Primeiro administrador
 
+Este template tem dois tipos de conta separados — escolha conforme o que você quer testar:
+
+### Conta de workspace (cliente/aluno comum, sem acesso de plataforma)
+
 ```bash
 pnpm --filter @wpptrack/api create-user -- --email voce@suaagencia.com --password 'uma-senha-forte' --role owner
 ```
 
-O `pnpm setup` também oferece esse passo automaticamente se as variáveis `SETUP_ADMIN_EMAIL`/`SETUP_ADMIN_PASSWORD` estiverem definidas no ambiente antes de rodá-lo.
-
-Se você quer que esse usuário também tenha acesso de **plataforma** (`/backoffice/clients`), preencha `WPPTRACK_PLATFORM_ADMIN_EMAILS` com o mesmo e-mail no `.env` **antes** de logar pela primeira vez — essa variável não cria conta nem senha, só concede o papel a uma conta que já existe (veja [`environment.md`](environment.md#banco-de-dados--autenticação)).
+Cria a conta **e** um workspace, com você como `owner` dele. O `pnpm setup` também oferece esse passo automaticamente se as variáveis `SETUP_ADMIN_EMAIL`/`SETUP_ADMIN_PASSWORD` (sem "PLATFORM" no nome) estiverem definidas no ambiente antes de rodá-lo. Esse comando se recusa a criar/alterar qualquer conta que já tenha papel de plataforma — não é o caminho para o admin de plataforma abaixo.
 
 **Validação:** o comando retorna sucesso (sem imprimir a senha) e você consegue logar depois com esse e-mail.
+
+### Conta de plataforma (acesso a `/backoffice/clients`)
+
+Defina no seu `.env` local, **antes** de subir a API pela primeira vez:
+
+```bash
+SETUP_PLATFORM_ADMIN_EMAIL=voce@suaagencia.com
+SETUP_PLATFORM_ADMIN_PASSWORD=uma-senha-forte
+```
+
+É o mesmo mecanismo de bootstrap usado em produção (veja
+[`environment.md`](environment.md#bootstrap-do-primeiro-administrador-por-env--caminho-oficial)):
+ao subir `pnpm --filter @wpptrack/api dev` com as duas variáveis definidas, a
+conta `platform_owner` é criada automaticamente no boot — sem workspace
+nenhum. Depois de conseguir logar, remova `SETUP_PLATFORM_ADMIN_PASSWORD` do
+`.env` (o bootstrap simplesmente para de rodar sem ela).
+
+Se quiser que a **mesma** conta criada com `create-user` acima também tenha
+acesso de plataforma, use o mesmo e-mail nas duas variáveis e defina também
+`SETUP_PLATFORM_ADMIN_CONFIRM_EXISTING=true` antes do próximo boot da API —
+isso promove a conta existente sem trocar a senha já definida pelo
+`create-user`.
+
+**Validação:** logando com o e-mail/senha de `SETUP_PLATFORM_ADMIN_*`, `/backoffice/clients` abre normalmente.
 
 ## 6. Subir API e web
 
@@ -118,6 +144,7 @@ Ambos devem responder com status HTTP 200/JSON de saúde (`/health/ready` retorn
 
    (a rota de ativação continua liberada durante o bloqueio; a chave sai do `.env`, nunca do corpo do comando em chat)
 4. Abra `/integrations` para conectar Meta ([`meta-manual.md`](meta-manual.md)) e um provedor de WhatsApp.
+5. Se você logou com a conta de plataforma, crie um workspace de cliente em `/backoffice/clients`. SMTP (`EMAIL_PROVIDER`/`SMTP_*` em [`environment.md`](environment.md#e-mail-smtp-byo)) é **opcional** — o workspace é criado com ou sem ele. Sem SMTP configurado, a tela avisa que é preciso gerar o link de ativação manual: use o botão correspondente na lista de workspaces e envie você mesmo ao responsável.
 
 ## Próximos passos
 

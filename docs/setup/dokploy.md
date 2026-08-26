@@ -139,18 +139,22 @@ No serviço da API, abra o **painel/formulário de variáveis de ambiente do ser
 
 ### 6.3 Administrador e Meta
 
-- **`WPPTRACK_PLATFORM_ADMIN_EMAILS`** — informe o e-mail real do administrador da sua instância **antes do primeiro login**, diretamente no Dokploy. Não use `***` como valor, não o versione e não o cole em chat. ⚠️ Isso **não cria a conta nem a senha** — é só uma allowlist de papel; veja como criar a própria conta em [`environment.md`](environment.md#banco-de-dados--autenticação) e no passo 13 abaixo.
+- **`SETUP_PLATFORM_ADMIN_EMAIL` e `SETUP_PLATFORM_ADMIN_PASSWORD`** — preencha as duas juntas, diretamente no Dokploy, **antes** do deploy do passo 7. Elas são o caminho oficial e único para criar o primeiro `platform_owner`: no boot seguinte da API, a conta é criada automaticamente (sem console/terminal, sem cadastro público temporário). Detalhe completo do mecanismo — idempotência, promoção de conta existente, quando remover a senha — em [`environment.md`](environment.md#bootstrap-do-primeiro-administrador-por-env--caminho-oficial). Não use `***` como valor, não versione e não cole em chat.
 - **`META_CONNECTION_MODES=manual`** — defina antes da configuração Meta. O MVP do aluno é somente manual, sem login social Facebook/OAuth.
 
-### 6.4 Segredos gerados
+### 6.4 E-mail (SMTP, opcional)
+
+- **`EMAIL_PROVIDER`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM_*`** — **opcional**, nunca um requisito para criar workspace/cliente no passo 13. Preencha só se você já decidiu que o responsável de cada workspace deve receber um e-mail automático de ativação; senão, deixe em branco e use o link de ativação manual descrito no passo 13. Tabela completa e exemplo de valores sem segredo real em [`environment.md`](environment.md#e-mail-smtp-byo). `SMTP_USER`/`SMTP_PASSWORD` são segredo do seu provedor SMTP — preencha direto no painel do Dokploy, nunca em chat.
+
+### 6.6 Segredos gerados
 
 Segredos gerados (`JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `EXTERNAL_CONNECTOR_ENCRYPTION_KEY`, `META_TOKEN_ENCRYPTION_KEY`, e demais `replace-me-*`) — gere valores **novos** para produção, nunca reutilize os de desenvolvimento local. Use `openssl rand -hex 32` (macOS/Linux) ou o PowerShell com `RandomNumberGenerator` (Windows) — nunca `Get-Random`, que não é criptograficamente seguro. Comandos prontos em [`environment.md`](environment.md#gerar-segredos-com-segurança-jwt_-_encryption_key-tokens-de-webhook).
 
-### 6.5 Licença (placeholder por enquanto)
+### 6.7 Licença (placeholder por enquanto)
 
 - `LICENSE_SERVER_URL`, `LICENSE_KEY`, `LICENSE_ACCOUNT_IDENTITY` — preenchidos de fato no passo 12. Você pode deixar `LICENSE_KEY`/`LICENSE_ACCOUNT_IDENTITY` em branco só até lá: sem licença ativa a API bloqueia **toda escrita** com `423` (inclusive criar workspace/cliente no passo 13).
 
-### 6.6 Provedores de WhatsApp (deixe para o passo 13)
+### 6.8 Provedores de WhatsApp (deixe para o passo 13)
 
 - Provedores de WhatsApp que você for usar (`UAZAPI_*`, `WAHA_*`, `ZAPI_*`, `NOD_API_BROKER_URL`) — preenchidos no passo 13. Antes de escolher, leia [`whatsapp-providers.md`](whatsapp-providers.md): preencher a env do provedor não cria sozinho uma conexão para nenhum workspace, e nem todo provedor tem webhook inbound confirmado hoje.
 
@@ -231,13 +235,11 @@ A chave vem da env `LICENSE_KEY` do serviço — não a cole no comando nem em c
 
 ## 13. Primeiro login, workspace, Meta manual e WhatsApp
 
-1. Confirme que `WPPTRACK_PLATFORM_ADMIN_EMAILS` já está preenchida e que a API foi redeployada depois da alteração.
-2. Crie a conta do primeiro administrador — `WPPTRACK_PLATFORM_ADMIN_EMAILS` **não cria a conta nem a senha**, só concede o papel de plataforma a uma conta que já exista com aquele e-mail no login. Em Dokploy/produção, sem acesso local ao `pnpm`, use um dos dois caminhos honestamente disponíveis hoje (veja [`environment.md`](environment.md#banco-de-dados--autenticação)):
-   - se o painel do Dokploy oferecer console/terminal para o container da API, rode `pnpm --filter @wpptrack/api create-user -- --email ... --password ... --role owner` de dentro dele (confirme na tela se essa opção existe — o rótulo varia por versão);
-   - senão, habilite temporariamente `AUTH_PUBLIC_REGISTRATION_ENABLED=true`, redeploy, cadastre-se pela tela de login do web com o e-mail que está em `WPPTRACK_PLATFORM_ADMIN_EMAILS`, depois volte a variável para `false` (ou remova — o padrão em produção já é desabilitado) e redeploy de novo.
-   Depois de logado, valide `/backoffice/clients`. Se cair em `/overview`, consulte o troubleshooting; não prossiga supondo que o acesso de plataforma existe.
-3. Para Meta, mantenha `META_CONNECTION_MODES=manual`, siga [`meta-manual.md`](meta-manual.md) e conecte o App ID/token de usuário do sistema (ou token permanente) no workspace. Não há OAuth/social login no MVP.
-4. Só depois conecte o provedor WhatsApp escolhido.
+1. Confirme que `SETUP_PLATFORM_ADMIN_EMAIL`/`SETUP_PLATFORM_ADMIN_PASSWORD` foram preenchidas no passo 6.3 e que a API já foi redeployada depois disso (passo 7) — o bootstrap roda automaticamente nesse redeploy, antes da API aceitar conexões; não é uma etapa manual separada.
+2. Logue no web publicado com o e-mail/senha definidos em `SETUP_PLATFORM_ADMIN_EMAIL`/`SETUP_PLATFORM_ADMIN_PASSWORD` e valide que abre `/backoffice/clients`. Se cair em `/overview`, o bootstrap não rodou como esperado — consulte [`troubleshooting.md`](troubleshooting.md#login-abre-overview-em-vez-de-backofficeclients) antes de tentar de novo. Confirmado o acesso, **remova `SETUP_PLATFORM_ADMIN_PASSWORD`** do painel (ou limpe o valor) e faça redeploy — sem a senha preenchida, o bootstrap simplesmente para de rodar a cada boot; é seguro fazer isso.
+3. Esse login ainda não tem workspace nenhum — o bootstrap cria só a conta de plataforma. Crie o primeiro workspace/cliente em `/backoffice/clients`. SMTP (passo 6.4) é **opcional** e não bloqueia esse passo: com SMTP configurado, o responsável recebe um e-mail de ativação; sem SMTP (ou se o envio falhar), a resposta traz `deliveryStatus: manual_link_required` e você gera o link de ativação manual pelo botão correspondente na própria lista de workspaces, enviando-o você mesmo ao responsável.
+4. Para Meta, mantenha `META_CONNECTION_MODES=manual`, siga [`meta-manual.md`](meta-manual.md) e conecte o App ID/token de usuário do sistema (ou token permanente) no workspace criado. Não há OAuth/social login no MVP.
+5. Só depois conecte o provedor WhatsApp escolhido.
 
 - **WhatsApp:** preencha na env da API as variáveis do provedor escolhido (`UAZAPI_*`, `WAHA_*`, `ZAPI_*` ou `NOD_API_BROKER_URL`) — tabela completa em [`environment.md`](environment.md). Redeploy da API após adicionar. ⚠️ Isso configura **uma única instância daquele provedor para todo o deployment** — não por workspace; não existe UI para criar mais de uma instância desses quatro provedores (a própria tela de Integrações avisa isso). O único modelo confirmadamente por workspace/multi-instância é a conexão de webhook inbound (Umbler/Gupshup), criada em `/integrations`. Veja o contrato completo, inclusive o que ainda não tem webhook inbound confirmado, em [`whatsapp-providers.md`](whatsapp-providers.md).
 

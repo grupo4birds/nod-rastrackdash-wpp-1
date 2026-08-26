@@ -73,8 +73,10 @@ export default async function BackofficeClientsPage() {
             <span className="eyebrow">Novo cliente</span>
             <h2>Criar workspace</h2>
             <p>
-              O primeiro responsável do workspace recebe um e-mail de ativação.
-              Se a entrega falhar, gere um link manual depois na lista abaixo.
+              O workspace é criado mesmo sem SMTP configurado (opcional). Com
+              SMTP, o primeiro responsável recebe um e-mail de ativação; sem
+              SMTP configurado ou se a entrega falhar, gere e envie um link
+              manual na lista abaixo.
             </p>
           </div>
         </div>

@@ -39,8 +39,9 @@ export function BackofficeClientsCreateForm() {
 
       <div className="form-command-row">
         <span>
-          O responsável recebe um e-mail de ativação; se a entrega falhar, gere
-          um link manual depois.
+          SMTP é opcional. O workspace é criado mesmo sem e-mail configurado;
+          se não houver SMTP nesta instância ou o envio falhar, gere e envie
+          o link de ativação manual para o responsável na lista abaixo.
         </span>
         <SubmitButton pendingLabel="Criando...">
           <UserPlus aria-hidden="true" size={16} strokeWidth={2} />

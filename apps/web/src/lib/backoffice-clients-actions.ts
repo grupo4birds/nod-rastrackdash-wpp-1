@@ -86,6 +86,13 @@ export async function createBackofficeWorkspaceAction(
 
     revalidatePath(CLIENTS_PATH);
 
+    if (result.deliveryStatus === "manual_link_required") {
+      return actionState(
+        "success",
+        `Workspace "${result.name}" criado. Esta instância não tem SMTP configurado (opcional), então nenhum e-mail foi enviado — gere o link de ativação manual na lista abaixo e envie você mesmo para o responsável.`,
+      );
+    }
+
     if (result.deliveryStatus === "failed") {
       return actionState(
         "success",
