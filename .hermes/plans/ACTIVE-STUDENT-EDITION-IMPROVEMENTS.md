@@ -60,7 +60,7 @@ O arquivo histórico `docs/superpowers/plans/2026-08-19-rastrackdash-student-edi
 |---|---|---|---|---|
 | Fase 0 | onboarding, Dokploy, Git/GitHub, envs, providers BYO e docs | público | **CONCLUÍDA** | PR #24, merge `7ba875a` |
 | Fase 1 | bootstrap persistente, `platform_owner`, RBAC, convites e proteção de owner | público | **CONCLUÍDA** | PR #25, merge `6212b33` |
-| Fase 2 | backoffice real multi-cliente, responsáveis, suporte escopado, anti-IDOR, ativação automática de licença e SMTP opcional | público | **IMPLEMENTADA LOCALMENTE — HOMOLOGAÇÃO INDIVIDUAL PENDENTE** | base mergeada em `374cc48`; commits locais `525886a`, `5d743d5`, `51781b1`; testes/builds locais verdes; sem push/deploy |
+| Fase 2 | backoffice real multi-cliente, responsáveis, suporte escopado, anti-IDOR, ativação automática de licença e SMTP opcional | público | **CONCLUÍDA — HOMOLOGADA EM INSTALAÇÃO INDIVIDUAL (2026-08-27)** | base `374cc48`; hardening `525886a`/`5d743d5`/`51781b1`; publicado até `454725c`; homologação confirmada pelo Samuel: deploy no commit, licença autoativada no boot, workspace sem SMTP, link manual one-time, bootstrap password removida |
 | Fase 3 | conectores externos MySQL/PostgreSQL com egress/SSRF seguro | público | **PENDENTE — ÚLTIMA FEATURE DE CÓDIGO** | necessária para conectar banco externo já populado, seguindo o padrão Dash com IA/Barbieri; executar somente depois do banner |
 | Fase 4 | UAZAPI por conexão/workspace, webhook e gatilhos | público | **IMPLEMENTADA NO HISTÓRICO F5.1–F5.7** | registry, UAZAPI BYO, NOD API, WAHA, Z-API, parsers e alertas já estão no `main` |
 
@@ -71,9 +71,8 @@ O arquivo histórico `docs/superpowers/plans/2026-08-19-rastrackdash-student-edi
 - Hardening local adicional: `525886a` (autoativação da licença), `5d743d5` (SMTP opcional no backend) e `51781b1` (UI/onboarding SMTP opcional).
 - Gates locais: licensing 54 testes; backoffice workspace 19/19; web typecheck/build verdes; shared build verde; `git diff --check` verde. A suíte completa shared mantém 9 falhas baseline de exports não relacionados.
 - Migrations: nenhuma.
-- Commit/push/PR/merge/deploy: hardening foi publicado em `origin/main` até `108fbf6`; não houve deploy.
-- Próxima prioridade: homologar a criação de workspace sem SMTP, ativação automática da licença e geração manual do link em uma instalação individual.
-- Depois da homologação, consolidar/homologar WhatsApp BYO por instalação/workspace; em seguida implementar o banner de atualização; somente então executar a Fase 3 de conexão de banco externo como última feature de código.
+- Commit/push/PR/merge/deploy: hardening publicado em `origin/main` até `454725c`; deploy homologado pelo Samuel em 2026-08-27 (commit confirmado no build, licença autoativada no boot sem curl, workspace criado sem SMTP com mensagem de link manual, link manual one-time funcionando, senha de bootstrap removida).
+- Próxima prioridade: consolidar/homologar WhatsApp BYO por instalação/workspace; depois banner de atualização; Fase 3 externa por último.
 - Fase 3 permanece obrigatória, mas foi movida para a última feature: conexão de banco externo MySQL/PostgreSQL já populado, seguindo o padrão de integração usado no Dash com IA/Barbieri.
 
 ### Decisão de ordenação — 2026-08-26
