@@ -20,6 +20,7 @@ import { LicenseClientModule } from "./licensing-client/license-client.module";
 import { OnboardingModule } from "./onboarding/onboarding.module";
 import { ReportingModule } from "./reporting/reporting.module";
 import { WebhooksModule } from "./webhooks/webhooks.module";
+import { WhatsappInstancesModule } from "./whatsapp-instances/whatsapp-instances.module";
 import { WorkspacesModule } from "./workspaces/workspaces.module";
 import { OpsAlertsModule } from "./ops-alerts/ops-alerts.module";
 
@@ -41,6 +42,7 @@ import { OpsAlertsModule } from "./ops-alerts/ops-alerts.module";
     LeadsModule,
     ReportingModule,
     WebhooksModule,
+    WhatsappInstancesModule,
     OpsAlertsModule,
     LicenseClientModule,
     OnboardingModule,

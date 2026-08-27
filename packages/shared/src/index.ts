@@ -17,3 +17,4 @@ export * from "./schemas/external-data-connectors";
 export * from "./schemas/inbound-webhooks";
 export * from "./schemas/provider-conversion-decisions";
 export * from "./schemas/ops-alerts";
+export * from "./schemas/whatsapp-instances";

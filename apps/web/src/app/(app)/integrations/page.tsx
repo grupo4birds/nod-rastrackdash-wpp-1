@@ -11,6 +11,7 @@ import type {
   MetaManualConfigurationDto,
   ProviderConversionRuleDto,
   CurrentWorkspaceDto,
+  WhatsappInstanceDto,
 } from "@wpptrack/shared";
 import {
   Activity,
@@ -71,6 +72,12 @@ import {
   resolveMetaStatus,
 } from "./meta-connection-state";
 import { MetaReportingAccountsForm } from "./meta-reporting-accounts-form";
+import {
+  createWhatsappInstanceAction,
+  deleteWhatsappInstanceAction,
+  refreshWhatsappInstanceAction,
+} from "./whatsapp-instance-actions";
+import { WhatsappInstancePanel } from "./whatsapp-instance-panel";
 
 type ResourceResult<T> = {
   data: T;
@@ -313,6 +320,26 @@ async function getInboundWebhookData(): Promise<
   } catch {
     return {
       data: null,
+      state: "error",
+    };
+  }
+}
+
+async function getWhatsappInstances(): Promise<
+  ResourceResult<WhatsappInstanceDto[]>
+> {
+  try {
+    const instances = await serverApiFetch<WhatsappInstanceDto[]>(
+      "/integrations/whatsapp-instances",
+    );
+
+    return {
+      data: instances,
+      state: instances.length > 0 ? "real" : "empty",
+    };
+  } catch {
+    return {
+      data: [],
       state: "error",
     };
   }
@@ -783,6 +810,7 @@ export default async function IntegrationsPage({
     pipelineResult,
     workspaceResult,
     metaCapabilitiesResult,
+    whatsappInstancesResult,
   ] = await Promise.all([
     getHealth(),
     getMetaConnection(),
@@ -790,6 +818,7 @@ export default async function IntegrationsPage({
     getIntegrationPipeline(),
     getCurrentWorkspaceResource(),
     getMetaCapabilities(),
+    getWhatsappInstances(),
   ]);
   const usesExternalWhatsapp =
     pipelineResult.data?.whatsappSource?.mode === "external";
@@ -835,6 +864,7 @@ export default async function IntegrationsPage({
     ...(inboundWebhookData?.capabilities.enabled
       ? [inboundWebhookResult.state]
       : []),
+    ...(usesExternalWhatsapp ? [] : [whatsappInstancesResult.state]),
   ].includes("error");
   const metaStatus = resolveMetaStatus(
     metaConnection?.status,
@@ -1411,35 +1441,13 @@ export default async function IntegrationsPage({
           ) : null}
 
           {!usesExternalWhatsapp && (
-            <div className="surface-panel whatsapp-instance-panel">
-              <span className="eyebrow">WhatsApp Business</span>
-              <h2>Instancia Uazapi (BYO)</h2>
-              <p className="muted">
-                Esta edicao conecta uma unica instancia Uazapi configurada por
-                variavel de ambiente (UAZAPI_BASE_URL/UAZAPI_TOKEN). Nao ha
-                marketplace de instancias nem cobranca dentro do painel.
-              </p>
-              <div className="metric-grid compact">
-                <div className="metric-card">
-                  <span className="micro-label">Status Uazapi</span>
-                  <strong>
-                    {statusLabel(
-                      health?.providers.find(
-                        (item) => item.provider === "uazapi_byo",
-                      )?.status ?? "not_configured",
-                    )}
-                  </strong>
-                </div>
-                <div className="metric-card">
-                  <span className="micro-label">Webhooks recebidos</span>
-                  <strong>
-                    {inboundConnectionCount > 0
-                      ? `${inboundConnectionCount} webhook${inboundConnectionCount === 1 ? "" : "s"}`
-                      : "Nenhum webhook ativo"}
-                  </strong>
-                </div>
-              </div>
-            </div>
+            <WhatsappInstancePanel
+              instances={whatsappInstancesResult.data}
+              canManage={canManageIntegrations}
+              createAction={createWhatsappInstanceAction}
+              refreshAction={refreshWhatsappInstanceAction}
+              removeAction={deleteWhatsappInstanceAction}
+            />
           )}
         </div>
       </section>
