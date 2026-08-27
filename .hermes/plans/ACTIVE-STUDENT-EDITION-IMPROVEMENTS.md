@@ -71,7 +71,7 @@ O arquivo histórico `docs/superpowers/plans/2026-08-19-rastrackdash-student-edi
 - Hardening local adicional: `525886a` (autoativação da licença), `5d743d5` (SMTP opcional no backend) e `51781b1` (UI/onboarding SMTP opcional).
 - Gates locais: licensing 54 testes; backoffice workspace 19/19; web typecheck/build verdes; shared build verde; `git diff --check` verde. A suíte completa shared mantém 9 falhas baseline de exports não relacionados.
 - Migrations: nenhuma.
-- Commit/push/PR/merge/deploy: hardening está commitado somente localmente; não houve push, PR, merge remoto ou deploy.
+- Commit/push/PR/merge/deploy: hardening foi publicado em `origin/main` até `108fbf6`; não houve deploy.
 - Próxima prioridade: homologar a criação de workspace sem SMTP, ativação automática da licença e geração manual do link em uma instalação individual.
 - Depois da homologação, consolidar/homologar WhatsApp BYO por instalação/workspace; em seguida implementar o banner de atualização; somente então executar a Fase 3 de conexão de banco externo como última feature de código.
 - Fase 3 permanece obrigatória, mas foi movida para a última feature: conexão de banco externo MySQL/PostgreSQL já populado, seguindo o padrão de integração usado no Dash com IA/Barbieri.
